@@ -1,6 +1,8 @@
 package com.ticketing.venue.domain;
 
-import com.ticketing.global.entity.BaseEntity;
+import com.ticketing.support.entity.BaseEntity;
+import com.ticketing.support.error.CoreException;
+import com.ticketing.support.error.ErrorType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -91,25 +93,25 @@ public class VenueSeat extends BaseEntity {
 
     private void validateVenue(Venue venue) {
         if (venue == null) {
-            throw new IllegalArgumentException("좌석은 반드시 공연장에 속해야 합니다.");
+            throw new CoreException(ErrorType.INVALID_VENUE_SEAT_VENUE);
         }
     }
 
     private void validateSection(String section) {
-        validateRequired(section, "구역은 필수입니다.");
+        validateRequired(section, ErrorType.INVALID_VENUE_SEAT_SECTION);
     }
 
     private void validateRowLabel(String rowLabel) {
-        validateRequired(rowLabel, "열은 필수입니다.");
+        validateRequired(rowLabel, ErrorType.INVALID_VENUE_SEAT_ROW_LABEL);
     }
 
     private void validateSeatNo(String seatNo) {
-        validateRequired(seatNo, "좌석 번호는 필수입니다.");
+        validateRequired(seatNo, ErrorType.INVALID_VENUE_SEAT_NO);
     }
 
-    private void validateRequired(String value, String message) {
+    private void validateRequired(String value, ErrorType errorType) {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException(message);
+            throw new CoreException(errorType);
         }
     }
 
