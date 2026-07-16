@@ -148,6 +148,35 @@ public enum ErrorType {
             ErrorCode.E4007,
             "존재하지 않는 회차입니다.",
             LogLevel.INFO
+    ),
+
+    // 회차 좌석
+    INVALID_PERFORMANCE_SEAT_PERFORMANCE(
+            HttpStatus.BAD_REQUEST,
+            ErrorCode.E5000,
+            "공연 회차는 필수입니다.",
+            LogLevel.INFO
+    ),
+
+    INVALID_PERFORMANCE_SEAT_VENUE_SEAT(
+            HttpStatus.BAD_REQUEST,
+            ErrorCode.E5001,
+            "공연장 좌석은 필수입니다.",
+            LogLevel.INFO
+    ),
+
+    PERFORMANCE_SEATS_ALREADY_CREATED(
+            HttpStatus.CONFLICT,
+            ErrorCode.E5002,
+            "이미 좌석이 생성된 공연 회차입니다.",
+            LogLevel.INFO
+    ),
+
+    VENUE_SEATS_NOT_FOUND(
+            HttpStatus.BAD_REQUEST,
+            ErrorCode.E5003,
+            "해당 공연장에 등록된 좌석이 없습니다.",
+            LogLevel.INFO
     );
 
 
