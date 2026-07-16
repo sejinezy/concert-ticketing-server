@@ -57,6 +57,13 @@ public enum ErrorType {
             LogLevel.INFO
     ),
 
+    VENUE_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            ErrorCode.E2002,
+            "존재하지 않는 공연장입니다.",
+            LogLevel.INFO
+    ),
+
     // 공연장 좌석
     INVALID_VENUE_SEAT_VENUE(
             HttpStatus.BAD_REQUEST,
@@ -84,7 +91,66 @@ public enum ErrorType {
             ErrorCode.E3003,
             "좌석 번호는 필수입니다.",
             LogLevel.INFO
+    ),
+
+    // 회차
+    INVALID_PERFORMANCE_EVENT(
+            HttpStatus.BAD_REQUEST,
+            ErrorCode.E4000,
+            "이벤트는 필수입니다.",
+            LogLevel.INFO
+    ),
+
+    INVALID_PERFORMANCE_VENUE(
+            HttpStatus.BAD_REQUEST,
+            ErrorCode.E4001,
+            "공연장은 필수입니다.",
+            LogLevel.INFO
+    ),
+
+    INVALID_PERFORMANCE_START_AT(
+            HttpStatus.BAD_REQUEST,
+            ErrorCode.E4002,
+            "공연 시작 시간은 필수입니다.",
+            LogLevel.INFO
+    ),
+
+    INVALID_PERFORMANCE_BOOKING_OPEN_AT(
+            HttpStatus.BAD_REQUEST,
+            ErrorCode.E4003,
+            "예매 오픈 시간은 필수입니다.",
+            LogLevel.INFO
+    ),
+
+    INVALID_PERFORMANCE_BOOKING_CLOSE_AT(
+            HttpStatus.BAD_REQUEST,
+            ErrorCode.E4004,
+            "예매 종료 시간은 필수입니다.",
+            LogLevel.INFO
+    ),
+
+    INVALID_BOOKING_PERIOD(
+            HttpStatus.BAD_REQUEST,
+            ErrorCode.E4005,
+            "예매 오픈 시간은 예매 종료 시간보다 빨라야 합니다.",
+            LogLevel.INFO
+    ),
+
+    INVALID_BOOKING_CLOSE_TIME(
+            HttpStatus.BAD_REQUEST,
+            ErrorCode.E4006,
+            "예매 종료 시간은 공연 시작 시간보다 최소 24시간 전이어야 합니다.",
+            LogLevel.INFO
+    ),
+
+    PERFORMANCE_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            ErrorCode.E4007,
+            "존재하지 않는 회차입니다.",
+            LogLevel.INFO
     );
+
+
 
     private final HttpStatus status;
     private final ErrorCode code;
