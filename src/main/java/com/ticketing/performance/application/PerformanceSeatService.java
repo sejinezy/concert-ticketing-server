@@ -84,7 +84,7 @@ public class PerformanceSeatService {
 
     private void validateVenueSeatsExist(List<VenueSeat> venueSeats) {
         if (venueSeats.isEmpty()) {
-            throw new CoreException(ErrorType.VENUE_SEATS_NOT_FOUND);
+            throw new CoreException(ErrorType.PERFORMANCE_SEAT_NOT_FOUND);
         }
     }
 

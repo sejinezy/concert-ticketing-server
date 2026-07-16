@@ -5,7 +5,9 @@ import static com.ticketing.venue.domain.QVenueSeat.venueSeat;
 
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import com.ticketing.performance.domain.PerformanceSeatStatus;
 import com.ticketing.performance.presentation.dto.PerformanceSeatResponse;
+import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 
@@ -39,5 +41,21 @@ public class PerformanceSeatQueryRepositoryImpl implements PerformanceSeatQueryR
                         venueSeat.seatNo.asc()
                 )
                 .fetch();
+    }
+
+    @Override
+    public long reserveIfAvailable(Long performanceSeatId, LocalDateTime updatedAt) {
+        return queryFactory
+                .update(performanceSeat)
+                .set(
+                        performanceSeat.status,
+                        PerformanceSeatStatus.RESERVED
+                )
+                .set(performanceSeat.updatedAt, updatedAt)
+                .where(
+                        performanceSeat.id.eq(performanceSeatId),
+                        performanceSeat.status.eq(PerformanceSeatStatus.AVAILABLE)
+                )
+                .execute();
     }
 }
