@@ -12,6 +12,7 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.util.StringUtils;
 
 
 @Getter
@@ -42,13 +43,13 @@ public class Venue extends BaseEntity {
     }
 
     private void validateName(String name) {
-        if (name == null || name.isBlank()) {
-            throw new CoreException(ErrorType.INVALID_VENUE_NAME);
+        if (!StringUtils.hasText(name)) {
+            throw new IllegalArgumentException("공연장 이름은 필수입니다.");
         }
     }
 
     private void validateAddress(String address) {
-        if (address == null || address.isBlank()) {
+        if (!StringUtils.hasText(address)) {
             throw new CoreException(ErrorType.INVALID_VENUE_ADDRESS);
         }
     }
