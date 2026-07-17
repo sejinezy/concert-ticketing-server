@@ -73,6 +73,12 @@ public class Reservation extends BaseEntity {
         return new Reservation(queueEntryId, performanceSeat, reservedAt);
     }
 
+    public void validateOwner(UUID queueEntryId) {
+        if (!this.queueEntryId.equals(queueEntryId)) {
+            throw new CoreException(ErrorType.RESERVATION_ACCESS_DENIED);
+        }
+    }
+
     private void validateQueueEntryId(UUID queueEntryId) {
         if (queueEntryId == null) {
             throw new CoreException(ErrorType.INVALID_RESERVATION_QUEUE_ENTRY_ID);
