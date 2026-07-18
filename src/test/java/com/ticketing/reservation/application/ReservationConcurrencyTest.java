@@ -18,6 +18,7 @@ import com.ticketing.venue.domain.Venue;
 import com.ticketing.venue.domain.VenueSeat;
 import com.ticketing.venue.repository.VenueRepository;
 import com.ticketing.venue.repository.VenueSeatRepository;
+import jakarta.persistence.EntityManager;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +30,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -66,6 +68,14 @@ public class ReservationConcurrencyTest {
 
     @Autowired
     private TransactionTemplate transactionTemplate;
+
+    @Autowired
+    private EntityManager entityManager;
+
+    @BeforeEach
+    void setUp() {
+        cleanDatabase();
+    }
 
     @Test
     void 동일한_좌석에_동시에_예약하면_하나만_성공한다() throws Exception {
@@ -169,6 +179,19 @@ public class ReservationConcurrencyTest {
 
             return performanceSeat.getId();
 
+        });
+    }
+
+    private void cleanDatabase() {
+        transactionTemplate.executeWithoutResult(status -> {
+            entityManager.clear();
+
+            reservationRepository.deleteAllInBatch();
+            performanceSeatRepository.deleteAllInBatch();
+            venueSeatRepository.deleteAllInBatch();
+            performanceRepository.deleteAllInBatch();
+            eventRepository.deleteAllInBatch();
+            venueRepository.deleteAllInBatch();
         });
     }
 }
