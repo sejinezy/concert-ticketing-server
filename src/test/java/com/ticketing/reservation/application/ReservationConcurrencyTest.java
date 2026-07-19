@@ -78,7 +78,7 @@ public class ReservationConcurrencyTest {
     }
 
     @Test
-    void 동일한_좌석에_동시에_예약하면_하나만_성공한다() throws Exception {
+    void 동일한_좌석에_동시에_예약하면_하나만_성공한다() throws InterruptedException, ExecutionException, TimeoutException {
 
         Long performanceSeatId = createPerformanceSeat();
 
