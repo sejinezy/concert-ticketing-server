@@ -1,7 +1,10 @@
 package com.ticketing.reservation.application;
 
 import com.ticketing.performance.repository.PerformanceSeatRepository;
+import com.ticketing.reservation.domain.Reservation;
+import com.ticketing.reservation.domain.ReservationStatusHistory;
 import com.ticketing.reservation.repository.ReservationRepository;
+import com.ticketing.reservation.repository.ReservationStatusHistoryRepository;
 import com.ticketing.reservation.repository.projection.ReservationExpirationTarget;
 import com.ticketing.support.error.CoreException;
 import com.ticketing.support.error.ErrorType;
@@ -15,11 +18,14 @@ public class ReservationExpirationProcessor {
 
     private final ReservationRepository reservationRepository;
     private final PerformanceSeatRepository performanceSeatRepository;
+    private final ReservationStatusHistoryRepository statusHistoryRepository;
 
     public ReservationExpirationProcessor(ReservationRepository reservationRepository,
-                                          PerformanceSeatRepository performanceSeatRepository) {
+                                          PerformanceSeatRepository performanceSeatRepository,
+                                          ReservationStatusHistoryRepository statusHistoryRepository) {
         this.reservationRepository = reservationRepository;
         this.performanceSeatRepository = performanceSeatRepository;
+        this.statusHistoryRepository = statusHistoryRepository;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -34,6 +40,11 @@ public class ReservationExpirationProcessor {
         }
 
         releasePerformanceSeat(target.performanceSeatId(), now);
+
+        Reservation reservation = reservationRepository.getReferenceById(target.reservationId());
+        statusHistoryRepository.save(
+                ReservationStatusHistory.expiredBySystem(reservation, now)
+        );
 
         return ReservationExpirationResult.EXPIRED;
     }
