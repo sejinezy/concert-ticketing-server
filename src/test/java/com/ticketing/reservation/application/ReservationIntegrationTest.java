@@ -12,8 +12,14 @@ import com.ticketing.performance.repository.PerformanceRepository;
 import com.ticketing.performance.repository.PerformanceSeatRepository;
 import com.ticketing.reservation.domain.Reservation;
 import com.ticketing.reservation.domain.ReservationStatus;
+import com.ticketing.reservation.domain.ReservationStatusChangeActorType;
+import com.ticketing.reservation.domain.ReservationStatusChangeReason;
+import com.ticketing.reservation.domain.ReservationStatusHistory;
 import com.ticketing.reservation.presentation.dto.ReservationCancelRequest;
+import com.ticketing.reservation.presentation.dto.ReservationCreateRequest;
+import com.ticketing.reservation.presentation.dto.ReservationResponse;
 import com.ticketing.reservation.repository.ReservationRepository;
+import com.ticketing.reservation.repository.ReservationStatusHistoryRepository;
 import com.ticketing.reservation.repository.projection.ReservationExpirationTarget;
 import com.ticketing.support.error.CoreException;
 import com.ticketing.support.error.ErrorType;
@@ -24,6 +30,7 @@ import com.ticketing.venue.repository.VenueRepository;
 import com.ticketing.venue.repository.VenueSeatRepository;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -72,6 +79,9 @@ public class ReservationIntegrationTest {
     private ReservationRepository reservationRepository;
 
     @Autowired
+    private ReservationStatusHistoryRepository statusHistoryRepository;
+
+    @Autowired
     private PlatformTransactionManager transactionManager;
 
     @Autowired
@@ -95,71 +105,211 @@ public class ReservationIntegrationTest {
 
 
     @Test
-    void 예약_취소_시_예약은_CANCELLED_좌석은_AVAILABLE로_변경된다() {
-        ReservationData data = createReservation(NOW.minusMinutes(1), true);
+    void 예약_생성_시_예약과_좌석_상태를_변경하고_생성_이력을_저장한다() {
+        Long performanceSeatId =
+                transactionTemplate.execute(status ->
+                        createPerformanceSeat(NOW, false)
+                );
+
+        UUID queueEntryId = UUID.randomUUID();
+
+        ReservationResponse response =
+                reservationService.create(
+                        performanceSeatId,
+                        new ReservationCreateRequest(queueEntryId)
+                );
+
+        Reservation reservation =
+                findReservation(response.reservationId());
+
+        PerformanceSeat performanceSeat =
+                findPerformanceSeat(performanceSeatId);
+
+        List<ReservationStatusHistory> histories =
+                findHistories(response.reservationId());
+
+        assertThat(reservation.getStatus())
+                .isEqualTo(ReservationStatus.RESERVED);
+
+        assertThat(performanceSeat.getStatus())
+                .isEqualTo(PerformanceSeatStatus.RESERVED);
+
+        assertThat(histories).hasSize(1);
+
+        ReservationStatusHistory history =
+                histories.getFirst();
+
+        assertThat(history.getPreviousStatus()).isNull();
+        assertThat(history.getChangedStatus())
+                .isEqualTo(ReservationStatus.RESERVED);
+        assertThat(history.getChangeReason())
+                .isEqualTo(
+                        ReservationStatusChangeReason.RESERVATION_CREATED
+                );
+        assertThat(history.getActorType())
+                .isEqualTo(
+                        ReservationStatusChangeActorType.QUEUE_ENTRY
+                );
+        assertThat(history.getActorReference())
+                .isEqualTo(queueEntryId.toString());
+        assertThat(history.getChangedAt()).isNotNull();
+    }
+
+    @Test
+    void 예약_취소_시_예약은_CANCELLED_좌석은_AVAILABLE로_변경되고_취소_이력이_저장된다() {
+        ReservationData data =
+                createReservation(
+                        NOW.minusMinutes(1),
+                        true
+                );
 
         reservationService.cancel(
-                data.reservationId,
-                new ReservationCancelRequest(data.queueEntryId)
+                data.reservationId(),
+                new ReservationCancelRequest(
+                        data.queueEntryId()
+                )
         );
 
-        Reservation reservation = findReservation(data.reservationId);
+        Reservation reservation =
+                findReservation(data.reservationId());
 
-        PerformanceSeat performanceSeat = findPerformanceSeat(data.performanceSeatId);
+        PerformanceSeat performanceSeat =
+                findPerformanceSeat(data.performanceSeatId());
 
-        assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.CANCELLED);
-        assertThat(performanceSeat.getStatus()).isEqualTo(PerformanceSeatStatus.AVAILABLE);
+        List<ReservationStatusHistory> histories =
+                findHistories(data.reservationId());
+
+        assertThat(reservation.getStatus())
+                .isEqualTo(ReservationStatus.CANCELLED);
+
+        assertThat(performanceSeat.getStatus())
+                .isEqualTo(PerformanceSeatStatus.AVAILABLE);
+
+        assertThat(histories).hasSize(1);
+
+        ReservationStatusHistory history =
+                histories.getFirst();
+
+        assertThat(history.getPreviousStatus())
+                .isEqualTo(ReservationStatus.RESERVED);
+        assertThat(history.getChangedStatus())
+                .isEqualTo(ReservationStatus.CANCELLED);
+        assertThat(history.getChangeReason())
+                .isEqualTo(
+                        ReservationStatusChangeReason.CUSTOMER_CANCELLED
+                );
+        assertThat(history.getActorType())
+                .isEqualTo(
+                        ReservationStatusChangeActorType.QUEUE_ENTRY
+                );
+        assertThat(history.getActorReference())
+                .isEqualTo(data.queueEntryId().toString());
     }
 
     @Test
-    void 만료된_예약은_EXPIRED_좌석은_AVAILABLE로_변경된다() {
+    void 만료된_예약은_EXPIRED_좌석은_AVAILABLE로_변경되고_만료_이력이_저장된다() {
+        ReservationData data =
+                createReservation(
+                        NOW.minusMinutes(20),
+                        true
+                );
 
-        ReservationData data = createReservation(NOW.minusMinutes(20), true);
-        ReservationExpirationTarget target = createExpirationTarget(data);
+        ReservationExpirationTarget target =
+                createExpirationTarget(data);
 
-        ReservationExpirationResult result = expirationProcessor.expire(target, NOW);
+        ReservationExpirationResult result =
+                expirationProcessor.expire(target, NOW);
 
-        Reservation reservation = findReservation(data.reservationId);
-        PerformanceSeat performanceSeat = findPerformanceSeat(data.performanceSeatId);
+        Reservation reservation =
+                findReservation(data.reservationId());
 
-        assertThat(result).isEqualTo(ReservationExpirationResult.EXPIRED);
-        assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.EXPIRED);
-        assertThat(performanceSeat.getStatus()).isEqualTo(PerformanceSeatStatus.AVAILABLE);
+        PerformanceSeat performanceSeat =
+                findPerformanceSeat(data.performanceSeatId());
+
+        List<ReservationStatusHistory> histories =
+                findHistories(data.reservationId());
+
+        assertThat(result)
+                .isEqualTo(ReservationExpirationResult.EXPIRED);
+
+        assertThat(reservation.getStatus())
+                .isEqualTo(ReservationStatus.EXPIRED);
+
+        assertThat(performanceSeat.getStatus())
+                .isEqualTo(PerformanceSeatStatus.AVAILABLE);
+
+        assertThat(histories).hasSize(1);
+
+        ReservationStatusHistory history =
+                histories.getFirst();
+
+        assertThat(history.getPreviousStatus())
+                .isEqualTo(ReservationStatus.RESERVED);
+        assertThat(history.getChangedStatus())
+                .isEqualTo(ReservationStatus.EXPIRED);
+        assertThat(history.getChangeReason())
+                .isEqualTo(
+                        ReservationStatusChangeReason.RESERVATION_EXPIRED
+                );
+        assertThat(history.getActorType())
+                .isEqualTo(
+                        ReservationStatusChangeActorType.SYSTEM
+                );
+        assertThat(history.getActorReference()).isNull();
+        assertThat(history.getChangedAt()).isEqualTo(NOW);
     }
 
     @Test
-    void 좌석_복구_실패_시_예약_상태_변경도_롤백된다() {
-        /**
+    void 좌석_복구_실패_시_예약_상태_변경과_이력_저장이_함께_롤백된다() {
+        /*
          * 정합성이 깨진 데이터를 만든다.
          *
-         * Reservation = RESERVED
+         * Reservation     = RESERVED
          * PerformanceSeat = AVAILABLE
          */
-        ReservationData data = createReservation(NOW.minusMinutes(20), false);
+        ReservationData data =
+                createReservation(
+                        NOW.minusMinutes(20),
+                        false
+                );
 
-        ReservationExpirationTarget target = createExpirationTarget(data);
+        ReservationExpirationTarget target =
+                createExpirationTarget(data);
 
         assertThatThrownBy(() ->
                 expirationProcessor.expire(target, NOW)
-        ).isInstanceOfSatisfying(
-                CoreException.class,
-                exception -> assertThat(exception.getErrorType())
-                        .isEqualTo(
-                                ErrorType.PERFORMANCE_SEAT_RELEASE_FAILED
-                        )
-        );
+        )
+                .isInstanceOfSatisfying(
+                        CoreException.class,
+                        exception -> assertThat(exception.getErrorType())
+                                .isEqualTo(
+                                        ErrorType.PERFORMANCE_SEAT_RELEASE_FAILED
+                                )
+                );
 
-        Reservation reservation = findReservation(data.reservationId);
-        PerformanceSeat performanceSeat = findPerformanceSeat(data.performanceSeatId);
+        Reservation reservation =
+                findReservation(data.reservationId());
 
-        // 트랜잭션 롤백 확인
-        assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.RESERVED);
-        assertThat(performanceSeat.getStatus()).isEqualTo(PerformanceSeatStatus.AVAILABLE);
+        PerformanceSeat performanceSeat =
+                findPerformanceSeat(data.performanceSeatId());
+
+        List<ReservationStatusHistory> histories =
+                findHistories(data.reservationId());
+
+        assertThat(reservation.getStatus())
+                .isEqualTo(ReservationStatus.RESERVED);
+
+        assertThat(performanceSeat.getStatus())
+                .isEqualTo(PerformanceSeatStatus.AVAILABLE);
+
+        assertThat(histories).isEmpty();
     }
 
     @Test
-    @DisplayName("취소와 만료가 동시에 실행돼도 하나의 상태 전이만 성공한다.")
-    void onlyOneStateTransitionSucceedsWhenCancellationAndExpirationRunConcurrently()
+    @DisplayName(
+            "취소와 만료가 동시에 실행돼도 하나의 상태 전이와 하나의 이력만 저장된다."
+    )
+    void onlyOneStateTransitionAndHistorySucceedsWhenCancellationAndExpirationRunConcurrently()
             throws Exception {
 
         /*
@@ -169,10 +319,11 @@ public class ReservationIntegrationTest {
          * PerformanceSeat = RESERVED
          * expiresAt       <= NOW
          */
-        ReservationData data = createReservation(
-                NOW.minusMinutes(20),
-                true
-        );
+        ReservationData data =
+                createReservation(
+                        NOW.minusMinutes(20),
+                        true
+                );
 
         ReservationExpirationTarget target =
                 new ReservationExpirationTarget(
@@ -183,8 +334,11 @@ public class ReservationIntegrationTest {
         ExecutorService executorService =
                 Executors.newFixedThreadPool(2);
 
-        CountDownLatch readyLatch = new CountDownLatch(2);
-        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch readyLatch =
+                new CountDownLatch(2);
+
+        CountDownLatch startLatch =
+                new CountDownLatch(1);
 
         try {
             Future<TransitionResult> cancellationFuture =
@@ -290,14 +444,13 @@ public class ReservationIntegrationTest {
                             : ReservationStatus.EXPIRED;
 
             Reservation reservation =
-                    reservationRepository
-                            .findById(data.reservationId())
-                            .orElseThrow();
+                    findReservation(data.reservationId());
 
             PerformanceSeat performanceSeat =
-                    performanceSeatRepository
-                            .findById(data.performanceSeatId())
-                            .orElseThrow();
+                    findPerformanceSeat(data.performanceSeatId());
+
+            List<ReservationStatusHistory> histories =
+                    findHistories(data.reservationId());
 
             assertThat(reservation.getStatus())
                     .isEqualTo(expectedStatus);
@@ -309,6 +462,16 @@ public class ReservationIntegrationTest {
             assertThat(performanceSeat.getStatus())
                     .isEqualTo(PerformanceSeatStatus.AVAILABLE);
 
+            /*
+             * 실제 상태 변경에 성공한 처리만 이력을 저장해야 한다.
+             */
+            assertThat(histories).hasSize(1);
+
+            assertThat(histories.getFirst().getPreviousStatus())
+                    .isEqualTo(ReservationStatus.RESERVED);
+
+            assertThat(histories.getFirst().getChangedStatus())
+                    .isEqualTo(expectedStatus);
         } finally {
             /*
              * readyLatch 대기 또는 검증 과정에서 실패하더라도
@@ -356,7 +519,12 @@ public class ReservationIntegrationTest {
         });
     }
 
-
+    /**
+     * 취소와 만료 테스트는 예약 생성 이력을 검증하는 테스트가 아니다.
+     *
+     * 따라서 ReservationService.create()를 사용하지 않고 예약을 직접 저장하여,
+     * 해당 테스트에서 발생한 취소 또는 만료 이력만 조회되도록 한다.
+     */
     private ReservationData createReservation(
             LocalDateTime reservedAt,
             boolean reserveSeat
@@ -452,10 +620,20 @@ public class ReservationIntegrationTest {
 
     }
 
+    private List<ReservationStatusHistory> findHistories(
+            Long reservationId
+    ) {
+        return statusHistoryRepository
+                .findAllByReservation_IdOrderByChangedAtAscIdAsc(
+                        reservationId
+                );
+    }
+
     private void cleanDatabase() {
         transactionTemplate.executeWithoutResult(status -> {
             entityManager.clear();
 
+            statusHistoryRepository.deleteAllInBatch();
             reservationRepository.deleteAllInBatch();
             performanceSeatRepository.deleteAllInBatch();
             venueSeatRepository.deleteAllInBatch();

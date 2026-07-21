@@ -11,6 +11,7 @@ import com.ticketing.performance.repository.PerformanceRepository;
 import com.ticketing.performance.repository.PerformanceSeatRepository;
 import com.ticketing.reservation.presentation.dto.ReservationCreateRequest;
 import com.ticketing.reservation.repository.ReservationRepository;
+import com.ticketing.reservation.repository.ReservationStatusHistoryRepository;
 import com.ticketing.support.error.CoreException;
 import com.ticketing.support.error.ErrorType;
 import com.ticketing.support.testcontainer.MySqlTestContainerConfig;
@@ -65,6 +66,9 @@ public class ReservationConcurrencyTest {
 
     @Autowired
     private VenueSeatRepository venueSeatRepository;
+
+    @Autowired
+    private ReservationStatusHistoryRepository statusHistoryRepository;
 
     @Autowired
     private TransactionTemplate transactionTemplate;
@@ -186,6 +190,7 @@ public class ReservationConcurrencyTest {
         transactionTemplate.executeWithoutResult(status -> {
             entityManager.clear();
 
+            statusHistoryRepository.deleteAllInBatch();
             reservationRepository.deleteAllInBatch();
             performanceSeatRepository.deleteAllInBatch();
             venueSeatRepository.deleteAllInBatch();
