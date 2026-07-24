@@ -13,7 +13,7 @@ public interface IdempotencyRequestRepository extends JpaRepository<IdempotencyR
     @Modifying(flushAutomatically = true)
     @Query(
             value = """
-                    INSERT IGNORE INTO idempotency_requests (
+                    INSERT IGNORE INTO idempotency_request (
                         idempotency_key,
                         operation,
                         request_hash,

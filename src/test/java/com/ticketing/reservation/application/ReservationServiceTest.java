@@ -4,6 +4,12 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+
+import com.ticketing.idempotency.application.IdempotencyExecution;
+import com.ticketing.idempotency.application.IdempotencyRequestHasher;
+import com.ticketing.idempotency.application.IdempotencyService;
+import com.ticketing.idempotency.domain.IdempotencyOperation;
+import com.ticketing.idempotency.domain.IdempotencyRequest;
 import com.ticketing.performance.domain.PerformanceSeat;
 import com.ticketing.performance.repository.PerformanceSeatRepository;
 import com.ticketing.reservation.domain.Reservation;
@@ -27,12 +33,15 @@ import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class ReservationServiceTest {
 
     private static final Long RESERVATION_ID = 1L;
     private static final Long PERFORMANCE_SEAT_ID = 10L;
+    private static final String IDEMPOTENCY_KEY = "7cb0d4b8-88ac-4e1e-91a3-4b875c67e840";
+    private static final String REQUEST_HASH = "a".repeat(64);
 
 
     @Mock
@@ -50,14 +59,40 @@ class ReservationServiceTest {
     @Mock
     private ReservationStatusHistoryRepository statusHistoryRepository;
 
+    @Mock
+    private IdempotencyService idempotencyService;
+
+    @Mock
+    private IdempotencyRequestHasher idempotencyRequestHasher;
+
     @InjectMocks
     private ReservationService reservationService;
 
     @Test
     void 예약을_생성하고_RESERVED_상태_이력을_저장한다() {
         UUID queueEntryId = UUID.randomUUID();
+
         ReservationCreateRequest request =
                 new ReservationCreateRequest(queueEntryId);
+
+        IdempotencyExecution execution =
+                IdempotencyExecution.first(
+                        mock(IdempotencyRequest.class)
+                );
+
+        when(idempotencyRequestHasher
+                .hashReservationCreate(
+                        PERFORMANCE_SEAT_ID,
+                        queueEntryId
+                ))
+                .thenReturn(REQUEST_HASH);
+
+        when(idempotencyService.begin(
+                IDEMPOTENCY_KEY,
+                IdempotencyOperation.CREATE_RESERVATION,
+                REQUEST_HASH
+        ))
+                .thenReturn(execution);
 
         when(performanceSeatRepository.reserveIfAvailable(
                 eq(PERFORMANCE_SEAT_ID),
@@ -71,10 +106,23 @@ class ReservationServiceTest {
         when(performanceSeat.getId())
                 .thenReturn(PERFORMANCE_SEAT_ID);
 
-        when(reservationRepository.save(any(Reservation.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(reservationRepository.save(
+                any(Reservation.class)
+        ))
+                .thenAnswer(invocation -> {
+                    Reservation savedReservation =
+                            invocation.getArgument(0);
 
-        reservationService.create(PERFORMANCE_SEAT_ID, request);
+                    ReflectionTestUtils.setField(
+                            savedReservation,
+                            "id",
+                            RESERVATION_ID
+                    );
+
+                    return savedReservation;
+                });
+
+        reservationService.create(IDEMPOTENCY_KEY, PERFORMANCE_SEAT_ID, request);
 
         ArgumentCaptor<ReservationStatusHistory> historyCaptor =
                 ArgumentCaptor.forClass(
@@ -83,6 +131,25 @@ class ReservationServiceTest {
 
         verify(statusHistoryRepository)
                 .save(historyCaptor.capture());
+
+        verify(idempotencyRequestHasher)
+                .hashReservationCreate(
+                        PERFORMANCE_SEAT_ID,
+                        queueEntryId
+                );
+
+        verify(idempotencyService)
+                .begin(
+                        IDEMPOTENCY_KEY,
+                        IdempotencyOperation.CREATE_RESERVATION,
+                        REQUEST_HASH
+                );
+
+        verify(idempotencyService)
+                .complete(
+                        execution,
+                        RESERVATION_ID
+                );
 
         ReservationStatusHistory history =
                 historyCaptor.getValue();

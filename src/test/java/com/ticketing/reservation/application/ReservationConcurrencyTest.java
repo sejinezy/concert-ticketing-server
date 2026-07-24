@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 
 import com.ticketing.event.domain.Event;
 import com.ticketing.event.repository.EventRepository;
+import com.ticketing.idempotency.repository.IdempotencyRequestRepository;
 import com.ticketing.performance.domain.Performance;
 import com.ticketing.performance.domain.PerformanceSeat;
 import com.ticketing.performance.domain.PerformanceSeatStatus;
@@ -71,6 +72,9 @@ public class ReservationConcurrencyTest {
     private ReservationStatusHistoryRepository statusHistoryRepository;
 
     @Autowired
+    private IdempotencyRequestRepository idempotencyRequestRepository;
+
+    @Autowired
     private TransactionTemplate transactionTemplate;
 
     @Autowired
@@ -103,8 +107,11 @@ public class ReservationConcurrencyTest {
 
                             try {
                                 reservationService.create(
+                                        UUID.randomUUID().toString(),
                                         performanceSeatId,
-                                        new ReservationCreateRequest(UUID.randomUUID())
+                                        new ReservationCreateRequest(
+                                                UUID.randomUUID()
+                                        )
                                 );
                                 return true;
                             } catch (CoreException exception) {
@@ -190,6 +197,7 @@ public class ReservationConcurrencyTest {
         transactionTemplate.executeWithoutResult(status -> {
             entityManager.clear();
 
+            idempotencyRequestRepository.deleteAllInBatch();
             statusHistoryRepository.deleteAllInBatch();
             reservationRepository.deleteAllInBatch();
             performanceSeatRepository.deleteAllInBatch();
