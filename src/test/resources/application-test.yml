@@ -1,0 +1,19 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        format_sql: true
+
+  sql:
+    init:
+      mode: never
+
+  datasource:
+    hikari:
+      maximum-pool-size: 20
+
+logging:
+  level:
+    org.hibernate.SQL: debug

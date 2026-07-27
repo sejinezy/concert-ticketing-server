@@ -172,10 +172,46 @@ public enum ErrorType {
             LogLevel.INFO
     ),
 
-    VENUE_SEATS_NOT_FOUND(
+    PERFORMANCE_SEAT_NOT_FOUND(
             HttpStatus.BAD_REQUEST,
             ErrorCode.E5003,
             "해당 공연장에 등록된 좌석이 없습니다.",
+            LogLevel.INFO
+    ),
+
+    PERFORMANCE_SEAT_ALREADY_RESERVED(
+            HttpStatus.BAD_REQUEST,
+            ErrorCode.E5004,
+            "이미 예약된 좌석입니다",
+            LogLevel.INFO
+    ),
+
+    // 예약
+    INVALID_RESERVATION_QUEUE_ENTRY_ID(
+            HttpStatus.BAD_REQUEST,
+            ErrorCode.E6000,
+            "대기열 참여 식별자는 필수입니다.",
+            LogLevel.INFO
+    ),
+
+    INVALID_RESERVATION_PERFORMANCE_SEAT(
+            HttpStatus.BAD_REQUEST,
+            ErrorCode.E6001,
+            "예약 좌석은 필수입니다.",
+            LogLevel.INFO
+    ),
+
+    INVALID_RESERVATION_RESERVED_AT(
+            HttpStatus.BAD_REQUEST,
+            ErrorCode.E6002,
+            "예약 시각은 필수입니다.",
+            LogLevel.INFO
+    ),
+
+    RESERVATION_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            ErrorCode.E6003,
+            "존재하지 않는 예약입니다.",
             LogLevel.INFO
     );
 
