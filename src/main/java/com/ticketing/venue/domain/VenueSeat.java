@@ -17,6 +17,7 @@ import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.util.StringUtils;
 
 @Getter
 @Entity
@@ -39,8 +40,7 @@ public class VenueSeat extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
             name = "venue_id",
-            nullable = false,
-            foreignKey = @ForeignKey(name = "fk_venue_seats_venue_id")
+            nullable = false
     )
     private Venue venue;
 
@@ -110,9 +110,8 @@ public class VenueSeat extends BaseEntity {
     }
 
     private void validateRequired(String value, ErrorType errorType) {
-        if (value == null || value.isBlank()) {
+        if (!StringUtils.hasText(value)) {
             throw new CoreException(errorType);
         }
     }
-
 }
