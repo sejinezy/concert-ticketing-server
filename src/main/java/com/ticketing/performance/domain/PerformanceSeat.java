@@ -42,16 +42,14 @@ public class PerformanceSeat extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
             name = "performance_id",
-            nullable = false,
-            foreignKey = @ForeignKey(name = "fk_performance_seats_performance_id")
+            nullable = false
     )
     private Performance performance;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(
             name = "venue_seat_id",
-            nullable = false,
-            foreignKey = @ForeignKey(name = "fk_performance_seats_venue_seat_id")
+            nullable = false
     )
     private VenueSeat venueSeat;
 
