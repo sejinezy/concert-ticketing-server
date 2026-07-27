@@ -3,10 +3,12 @@ package com.ticketing.reservation.application;
 import com.ticketing.performance.domain.PerformanceSeat;
 import com.ticketing.performance.repository.PerformanceSeatRepository;
 import com.ticketing.reservation.domain.Reservation;
+import com.ticketing.reservation.domain.ReservationStatusHistory;
 import com.ticketing.reservation.presentation.dto.ReservationCancelRequest;
 import com.ticketing.reservation.presentation.dto.ReservationCreateRequest;
 import com.ticketing.reservation.presentation.dto.ReservationResponse;
 import com.ticketing.reservation.repository.ReservationRepository;
+import com.ticketing.reservation.repository.ReservationStatusHistoryRepository;
 import com.ticketing.support.error.CoreException;
 import com.ticketing.support.error.ErrorType;
 import java.time.LocalDateTime;
@@ -20,11 +22,14 @@ public class ReservationService {
 
     private final ReservationRepository reservationRepository;
     private final PerformanceSeatRepository performanceSeatRepository;
+    private final ReservationStatusHistoryRepository statusHistoryRepository;
 
     public ReservationService(ReservationRepository reservationRepository,
-                              PerformanceSeatRepository performanceSeatRepository) {
+                              PerformanceSeatRepository performanceSeatRepository,
+                              ReservationStatusHistoryRepository statusHistoryRepository) {
         this.reservationRepository = reservationRepository;
         this.performanceSeatRepository = performanceSeatRepository;
+        this.statusHistoryRepository = statusHistoryRepository;
     }
 
     @Transactional
@@ -47,6 +52,10 @@ public class ReservationService {
 
         Reservation save = reservationRepository.save(reservation);
 
+        statusHistoryRepository.save(
+                ReservationStatusHistory.createdByQueueEntry(save, reservedAt)
+        );
+
         return ReservationResponse.from(save);
     }
 
@@ -68,6 +77,10 @@ public class ReservationService {
 
         cancelReservation(reservationId, now);
         releasePerformanceSeat(reservation.getPerformanceSeat().getId(), now);
+
+        statusHistoryRepository.save(
+                ReservationStatusHistory.cancelledByQueueEntry(reservation, now)
+        );
 
     }
 

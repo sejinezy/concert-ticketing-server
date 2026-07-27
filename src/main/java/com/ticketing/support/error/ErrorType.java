@@ -234,6 +234,26 @@ public enum ErrorType {
             ErrorCode.E6005,
             "취소할 수 없는 예약 상태입니다.",
             LogLevel.INFO
+    ),
+
+    // 예약 변경 이력
+    INVALID_RESERVATION_STATUS_HISTORY_RESERVATION(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            ErrorCode.E7000,
+            "예약 상태 변경 이력에는 예약 정보가 필요합니다.",
+            LogLevel.ERROR
+    ),
+    INVALID_RESERVATION_STATUS_HISTORY_CHANGED_AT(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            ErrorCode.E7001,
+            "예약 상태 변경 이력에는 변경 시각이 필요합니다.",
+            LogLevel.ERROR
+    ),
+    INVALID_RESERVATION_STATUS_HISTORY_ACTOR_REFERENCE(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            ErrorCode.E7002,
+            "예약 상태 변경 주체 식별자가 누락되었습니다.",
+            LogLevel.ERROR
     );
 
 
