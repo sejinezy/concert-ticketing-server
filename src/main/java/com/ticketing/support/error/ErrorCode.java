@@ -50,5 +50,15 @@ public enum ErrorCode {
     // 예약 변경 이력
     E7000,
     E7001,
-    E7002
+    E7002,
+
+    // idempotency
+    E8000,
+    E8001,
+    E8002,
+    E8003,
+    E8004,
+    E8005,
+    E8006
+
 }

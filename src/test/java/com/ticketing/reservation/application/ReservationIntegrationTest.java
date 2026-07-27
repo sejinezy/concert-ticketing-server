@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.*;
 
 import com.ticketing.event.domain.Event;
 import com.ticketing.event.repository.EventRepository;
+import com.ticketing.idempotency.repository.IdempotencyRequestRepository;
 import com.ticketing.performance.domain.Performance;
 import com.ticketing.performance.domain.PerformanceSeat;
 import com.ticketing.performance.domain.PerformanceSeatStatus;
@@ -82,6 +83,9 @@ public class ReservationIntegrationTest {
     private ReservationStatusHistoryRepository statusHistoryRepository;
 
     @Autowired
+    private IdempotencyRequestRepository idempotencyRequestRepository;
+
+    @Autowired
     private PlatformTransactionManager transactionManager;
 
     @Autowired
@@ -112,11 +116,15 @@ public class ReservationIntegrationTest {
                 );
 
         UUID queueEntryId = UUID.randomUUID();
+        String idempotencyKey = UUID.randomUUID().toString();
 
         ReservationResponse response =
                 reservationService.create(
+                        idempotencyKey,
                         performanceSeatId,
-                        new ReservationCreateRequest(queueEntryId)
+                        new ReservationCreateRequest(
+                                queueEntryId
+                        )
                 );
 
         Reservation reservation =
@@ -633,6 +641,7 @@ public class ReservationIntegrationTest {
         transactionTemplate.executeWithoutResult(status -> {
             entityManager.clear();
 
+            idempotencyRequestRepository.deleteAllInBatch();
             statusHistoryRepository.deleteAllInBatch();
             reservationRepository.deleteAllInBatch();
             performanceSeatRepository.deleteAllInBatch();

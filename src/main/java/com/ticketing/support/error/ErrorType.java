@@ -254,6 +254,50 @@ public enum ErrorType {
             ErrorCode.E7002,
             "예약 상태 변경 주체 식별자가 누락되었습니다.",
             LogLevel.ERROR
+    ),
+
+    //idempotency
+    IDEMPOTENCY_KEY_REQUIRED(
+            HttpStatus.BAD_REQUEST,
+            ErrorCode.E8000,
+            "멱등성 키는 필수입니다.",
+            LogLevel.INFO
+    ),
+    INVALID_IDEMPOTENCY_KEY(
+            HttpStatus.BAD_REQUEST,
+            ErrorCode.E8001,
+            "멱등성 키는 UUID 형식이어야 합니다.",
+            LogLevel.INFO
+    ),
+    IDEMPOTENCY_KEY_CONFLICT(
+            HttpStatus.CONFLICT,
+            ErrorCode.E8002,
+            "동일한 멱등성 키가 다른 요청에 사용되었습니다.",
+            LogLevel.INFO
+    ),
+    IDEMPOTENCY_REQUEST_IN_PROGRESS(
+            HttpStatus.CONFLICT,
+            ErrorCode.E8003,
+            "동일한 요청이 처리 중입니다.",
+            LogLevel.INFO
+    ),
+    IDEMPOTENCY_RESULT_NOT_FOUND(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            ErrorCode.E8004,
+            "완료된 멱등성 요청의 처리 결과를 찾을 수 없습니다.",
+            LogLevel.ERROR
+    ),
+    IDEMPOTENCY_REQUEST_NOT_FOUND(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            ErrorCode.E8005,
+            "멱등성 요청 정보를 찾을 수 없습니다.",
+            LogLevel.ERROR
+    ),
+    IDEMPOTENCY_INVALID_STATE(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            ErrorCode.E8006,
+            "멱등성 요청 상태가 올바르지 않습니다.",
+            LogLevel.ERROR
     );
 
 

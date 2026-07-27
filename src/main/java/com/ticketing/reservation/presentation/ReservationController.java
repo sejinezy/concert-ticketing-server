@@ -11,12 +11,15 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api")
 public class ReservationController {
+
+    private static final String IDEMPOTENCY_KEY_HEADER = "Idempotency-Key";
 
     private final ReservationService reservationService;
 
@@ -26,10 +29,16 @@ public class ReservationController {
 
     @PostMapping("/performance-seats/{performanceSeatId}/reservations")
     public ApiResponse<ReservationResponse> create(
+            @RequestHeader(
+                    value = IDEMPOTENCY_KEY_HEADER,
+                    required = false
+            )
+            String idempotencyKey,
+
             @PathVariable Long performanceSeatId,
             @Valid @RequestBody ReservationCreateRequest request
     ) {
-        ReservationResponse response = reservationService.create(performanceSeatId, request);
+        ReservationResponse response = reservationService.create(idempotencyKey,performanceSeatId, request);
 
         return ApiResponse.success(response);
     }

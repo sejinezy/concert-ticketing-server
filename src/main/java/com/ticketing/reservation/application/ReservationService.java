@@ -1,5 +1,9 @@
 package com.ticketing.reservation.application;
 
+import com.ticketing.idempotency.application.IdempotencyExecution;
+import com.ticketing.idempotency.application.IdempotencyRequestHasher;
+import com.ticketing.idempotency.application.IdempotencyService;
+import com.ticketing.idempotency.domain.IdempotencyOperation;
 import com.ticketing.performance.domain.PerformanceSeat;
 import com.ticketing.performance.repository.PerformanceSeatRepository;
 import com.ticketing.reservation.domain.Reservation;
@@ -12,7 +16,6 @@ import com.ticketing.reservation.repository.ReservationStatusHistoryRepository;
 import com.ticketing.support.error.CoreException;
 import com.ticketing.support.error.ErrorType;
 import java.time.LocalDateTime;
-import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,40 +26,38 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final PerformanceSeatRepository performanceSeatRepository;
     private final ReservationStatusHistoryRepository statusHistoryRepository;
+    private final IdempotencyService idempotencyService;
+    private final IdempotencyRequestHasher idempotencyRequestHasher;
 
     public ReservationService(ReservationRepository reservationRepository,
                               PerformanceSeatRepository performanceSeatRepository,
-                              ReservationStatusHistoryRepository statusHistoryRepository) {
+                              ReservationStatusHistoryRepository statusHistoryRepository,
+                              IdempotencyService itempotencyService, IdempotencyRequestHasher idempotencyRequestHasher) {
         this.reservationRepository = reservationRepository;
         this.performanceSeatRepository = performanceSeatRepository;
         this.statusHistoryRepository = statusHistoryRepository;
+        this.idempotencyService = itempotencyService;
+        this.idempotencyRequestHasher = idempotencyRequestHasher;
     }
 
     @Transactional
     public ReservationResponse create(
+            String idempotencyKey,
             Long performanceSeatId,
             ReservationCreateRequest request
     ) {
-        LocalDateTime reservedAt = LocalDateTime.now();
+        IdempotencyExecution execution = beginIdempotentReservation(idempotencyKey, performanceSeatId,
+                request);
 
-        long updatedCount = performanceSeatRepository.reserveIfAvailable(
-                performanceSeatId,
-                reservedAt
-        );
+        if (execution.isReplay()) {
+            return replayReservation(execution);
+        }
 
-        validateReservationResult(performanceSeatId, updatedCount);
+        Reservation reservation = createAndRecordReservation(performanceSeatId, request);
 
-        PerformanceSeat performanceSeat = performanceSeatRepository.getReferenceById(performanceSeatId);
+        completeIdempotentReservation(execution, reservation);
 
-        Reservation reservation = Reservation.create(request.queueEntryId(), performanceSeat, reservedAt);
-
-        Reservation save = reservationRepository.save(reservation);
-
-        statusHistoryRepository.save(
-                ReservationStatusHistory.createdByQueueEntry(save, reservedAt)
-        );
-
-        return ReservationResponse.from(save);
+        return ReservationResponse.from(reservation);
     }
 
     public ReservationResponse get(Long reservationId) {
@@ -82,6 +83,78 @@ public class ReservationService {
                 ReservationStatusHistory.cancelledByQueueEntry(reservation, now)
         );
 
+    }
+
+    private IdempotencyExecution beginIdempotentReservation(
+            String idempotencyKey,
+            Long performanceSeatId,
+            ReservationCreateRequest request
+    ) {
+        String requestHash =
+                idempotencyRequestHasher
+                        .hashReservationCreate(
+                                performanceSeatId,
+                                request.queueEntryId()
+                        );
+
+        return idempotencyService.begin(
+                idempotencyKey,
+                IdempotencyOperation.CREATE_RESERVATION,
+                requestHash
+        );
+    }
+
+    private ReservationResponse replayReservation(
+            IdempotencyExecution execution
+    ) {
+        return getIdempotentReservationResult(
+                execution.getCompletedResultId()
+        );
+    }
+
+    private Reservation createAndRecordReservation(
+            Long performanceSeatId,
+            ReservationCreateRequest request
+    ) {
+        LocalDateTime reservedAt =
+                LocalDateTime.now();
+
+        Reservation reservation =
+                createReservation(
+                        performanceSeatId,
+                        request,
+                        reservedAt
+                );
+
+        saveReservationCreatedHistory(
+                reservation,
+                reservedAt
+        );
+
+        return reservation;
+    }
+
+    private void saveReservationCreatedHistory(
+            Reservation reservation,
+            LocalDateTime reservedAt
+    ) {
+        statusHistoryRepository.save(
+                ReservationStatusHistory
+                        .createdByQueueEntry(
+                                reservation,
+                                reservedAt
+                        )
+        );
+    }
+
+    private void completeIdempotentReservation(
+            IdempotencyExecution execution,
+            Reservation reservation
+    ) {
+        idempotencyService.complete(
+                execution,
+                reservation.getId()
+        );
     }
 
     private Reservation getReservation(Long reservationId) {
@@ -118,4 +191,56 @@ public class ReservationService {
 
         throw new CoreException(ErrorType.PERFORMANCE_SEAT_ALREADY_RESERVED);
     }
+
+    private ReservationResponse getIdempotentReservationResult(Long reservationId) {
+        Reservation reservation =
+                reservationRepository
+                        .findById(reservationId)
+                        .orElseThrow(() ->
+                                new CoreException(
+                                        ErrorType
+                                                .IDEMPOTENCY_RESULT_NOT_FOUND
+                                )
+                        );
+
+        return ReservationResponse.from(
+                reservation
+        );
+    }
+
+    private Reservation createReservation(
+            Long performanceSeatId,
+            ReservationCreateRequest request,
+            LocalDateTime reservedAt
+    ) {
+        long updatedCount =
+                performanceSeatRepository
+                        .reserveIfAvailable(
+                                performanceSeatId,
+                                reservedAt
+                        );
+
+        validateReservationResult(
+                performanceSeatId,
+                updatedCount
+        );
+
+        PerformanceSeat performanceSeat =
+                performanceSeatRepository
+                        .getReferenceById(
+                                performanceSeatId
+                        );
+
+        Reservation reservation =
+                Reservation.create(
+                        request.queueEntryId(),
+                        performanceSeat,
+                        reservedAt
+                );
+
+        return reservationRepository.save(
+                reservation
+        );
+    }
+
 }
