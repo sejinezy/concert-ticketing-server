@@ -12,6 +12,7 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.util.StringUtils;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -52,7 +53,7 @@ public class Event extends BaseEntity {
     }
 
     private void validateTitle(String title) {
-        if (title == null || title.isBlank()) {
+        if (!StringUtils.hasText(title)) {
             throw new CoreException(ErrorType.INVALID_EVENT_TITLE);
         }
     }
