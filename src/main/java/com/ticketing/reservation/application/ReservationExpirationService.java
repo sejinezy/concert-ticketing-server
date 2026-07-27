@@ -26,11 +26,13 @@ public class ReservationExpirationService {
         this.batchSize = batchSize;
     }
 
-    public void expireReservations() {
-        LocalDateTime now = LocalDateTime.now();
+    public void expireReservations(LocalDateTime cutoffAt) {
 
-        List<ReservationExpirationTarget> targets = reservationRepository.findExpirationTargets(now,
-                batchSize);
+        List<ReservationExpirationTarget> targets =
+                reservationRepository.findExpirationTargets(
+                        cutoffAt,
+                        batchSize
+                );
 
         if (targets.isEmpty()) {
             return;
@@ -42,7 +44,7 @@ public class ReservationExpirationService {
 
         for (ReservationExpirationTarget target : targets) {
             try {
-                ReservationExpirationResult result = expirationProcessor.expire(target, now);
+                ReservationExpirationResult result = expirationProcessor.expire(target, cutoffAt);
 
                 if (result == ReservationExpirationResult.EXPIRED) {
                     expiredCount++;
