@@ -58,4 +58,20 @@ public class PerformanceSeatQueryRepositoryImpl implements PerformanceSeatQueryR
                 )
                 .execute();
     }
+
+    @Override
+    public long releaseIfReserved(Long performanceSeatId, LocalDateTime updatedAt) {
+        return queryFactory
+                .update(performanceSeat)
+                .set(
+                        performanceSeat.status,
+                        PerformanceSeatStatus.AVAILABLE
+                )
+                .set(performanceSeat.updatedAt, updatedAt)
+                .where(
+                        performanceSeat.id.eq(performanceSeatId),
+                        performanceSeat.status.eq(PerformanceSeatStatus.RESERVED)
+                )
+                .execute();
+    }
 }

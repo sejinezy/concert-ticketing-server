@@ -9,4 +9,6 @@ public interface PerformanceSeatQueryRepository {
     List<PerformanceSeatResponse> findAllByPerformanceId(Long performanceId);
 
     long reserveIfAvailable(Long performanceSeatId, LocalDateTime updatedAt);
+
+    long releaseIfReserved(Long performanceSeatId, LocalDateTime updatedAt);
 }

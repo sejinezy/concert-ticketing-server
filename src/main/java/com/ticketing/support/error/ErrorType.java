@@ -186,6 +186,13 @@ public enum ErrorType {
             LogLevel.INFO
     ),
 
+    PERFORMANCE_SEAT_RELEASE_FAILED(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            ErrorCode.E5005,
+            "예약 좌석 복구에 실패했습니다.",
+            LogLevel.ERROR
+    ),
+
     // 예약
     INVALID_RESERVATION_QUEUE_ENTRY_ID(
             HttpStatus.BAD_REQUEST,
@@ -212,6 +219,20 @@ public enum ErrorType {
             HttpStatus.NOT_FOUND,
             ErrorCode.E6003,
             "존재하지 않는 예약입니다.",
+            LogLevel.INFO
+    ),
+
+    RESERVATION_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+            ErrorCode.E6004,
+            "해당 예약을 취소할 권한이 없습니다.",
+            LogLevel.INFO
+    ),
+
+    RESERVATION_NOT_CANCELLABLE(
+            HttpStatus.CONFLICT,
+            ErrorCode.E6005,
+            "취소할 수 없는 예약 상태입니다.",
             LogLevel.INFO
     );
 

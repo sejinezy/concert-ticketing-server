@@ -17,7 +17,7 @@ public class ApiResponse<T> {
         this.error = error;
     }
 
-    public static ApiResponse<Object> success() {
+    public static <S> ApiResponse<S> success() {
         return new ApiResponse<>(ResultType.SUCCESS, null, null);
     }
 
