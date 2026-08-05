@@ -28,7 +28,7 @@ public class ReservationExpirationProcessor {
         this.statusHistoryRepository = statusHistoryRepository;
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public ReservationExpirationResult expire(
             ReservationExpirationTarget target,
             LocalDateTime now

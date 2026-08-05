@@ -1,14 +1,13 @@
 package com.ticketing.reservation.batch.expiration;
 
-import com.ticketing.reservation.application.ReservationExpirationService;
-import java.time.LocalDateTime;
+import com.ticketing.reservation.repository.projection.ReservationExpirationTarget;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.step.builder.StepBuilder;
-import org.springframework.batch.infrastructure.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -35,40 +34,17 @@ public class ReservationExpirationJobConfig {
     public Step reservationExpirationStep(
             JobRepository jobRepository,
             PlatformTransactionManager transactionManager,
-            ReservationExpirationService reservationExpirationService
+            ReservationExpirationItemReader itemReader,
+            ReservationExpirationItemWriter itemWriter,
+            @Value("${reservation.expiration.chunk-size:100}")
+            int chunkSize
     ) {
+
         return new StepBuilder(STEP_NAME, jobRepository)
-                .tasklet(
-                        ((contribution, chunkContext) -> {
-                            Object parameter = chunkContext
-                                    .getStepContext()
-                                    .getJobParameters()
-                                    .get(CUTOFF_AT_PARAMETER);
-
-                            LocalDateTime cutoffAt = parseCutoffAt(parameter);
-
-                            reservationExpirationService.expireReservations(cutoffAt);
-
-                            return RepeatStatus.FINISHED;
-                        }),
-                        transactionManager
-                )
+                .<ReservationExpirationTarget, ReservationExpirationTarget>chunk(chunkSize)
+                .reader(itemReader)
+                .writer(itemWriter)
+                .transactionManager(transactionManager)
                 .build();
-    }
-
-    private LocalDateTime parseCutoffAt(Object parameter) {
-        if (parameter == null) {
-            throw new IllegalArgumentException("cutoffAt JobParameter는 필수입니다.");
-        }
-
-        try {
-            return LocalDateTime.parse(parameter.toString());
-        } catch (RuntimeException exception) {
-            throw new IllegalArgumentException(
-                    "cutoffAt은 ISO-8601 형식이어야 합니다. "
-                            + "예: 2026-07-27T12:00:00",
-                    exception
-            );
-        }
     }
 }
