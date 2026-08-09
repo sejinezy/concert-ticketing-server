@@ -41,6 +41,9 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-testcontainers'
 	testImplementation 'org.testcontainers:testcontainers-mysql'
 	testImplementation 'org.testcontainers:testcontainers-jdbc'
+
+	implementation 'org.springframework.boot:spring-boot-starter-batch-jdbc'
+	testImplementation 'org.springframework.boot:spring-boot-starter-batch-jdbc-test'
 }
 
 tasks.named('test') {

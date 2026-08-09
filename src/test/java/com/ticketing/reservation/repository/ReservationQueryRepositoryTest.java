@@ -12,7 +12,6 @@ import com.ticketing.performance.repository.PerformanceRepository;
 import com.ticketing.performance.repository.PerformanceSeatRepository;
 import com.ticketing.reservation.domain.Reservation;
 import com.ticketing.reservation.domain.ReservationStatus;
-import com.ticketing.reservation.repository.projection.ReservationExpirationTarget;
 import com.ticketing.support.config.QuerydslConfig;
 import com.ticketing.support.testcontainer.MySqlTestContainerConfig;
 import com.ticketing.venue.domain.Venue;
@@ -20,7 +19,6 @@ import com.ticketing.venue.domain.VenueSeat;
 import com.ticketing.venue.repository.VenueRepository;
 import com.ticketing.venue.repository.VenueSeatRepository;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -225,89 +223,6 @@ class ReservationQueryRepositoryTest {
         assertThat(unchangedSeat.getStatus()).isEqualTo(PerformanceSeatStatus.AVAILABLE);
     }
 
-    @Test
-    void 만료_대상은_expiresAt과_id_ASC_순서로_조회된다() {
-        ReservationData oldest = createReservation(
-                NOW.minusMinutes(40),
-                true
-        );
-
-        ReservationData sameExpiresAtFirst = createReservation(
-                NOW.minusMinutes(30),
-                true
-        );
-
-        ReservationData sameExpiresAtSecond = createReservation(
-                NOW.minusMinutes(30),
-                true
-        );
-
-        // 아직 만료되지 않은 예약이므로 조회에서 제외
-        createReservation(
-                NOW.minusMinutes(5),
-                true
-        );
-
-        // 만료 시각은 지났지만 CANCELLED이므로 조회에서 제외
-        ReservationData cancelled = createReservation(
-                NOW.minusMinutes(20),
-                true
-        );
-
-        reservationRepository.cancelIfReserved(
-                cancelled.reservationId,
-                NOW
-        );
-
-        List<ReservationExpirationTarget> targets = reservationRepository.findExpirationTargets(
-                NOW,
-                100
-        );
-
-        assertThat(targets)
-                .extracting(
-                        ReservationExpirationTarget::reservationId
-                )
-                .containsExactly(
-                        oldest.reservationId,
-                        sameExpiresAtFirst.reservationId,
-                        sameExpiresAtSecond.reservationId
-                );
-    }
-
-    @Test
-    void 만료_대상_조회_결과는_batchSize_를_넘지_않는다() {
-        ReservationData first = createReservation(
-                NOW.minusMinutes(40),
-                true
-        );
-
-        ReservationData second = createReservation(
-                NOW.minusMinutes(30),
-                true
-        );
-
-        createReservation(
-                NOW.minusMinutes(20),
-                true
-        );
-
-        List<ReservationExpirationTarget> targets = reservationRepository.findExpirationTargets(
-                NOW,
-                2
-        );
-
-        assertThat(targets).hasSize(2);
-
-        assertThat(targets)
-                .extracting(
-                        ReservationExpirationTarget::reservationId
-                )
-                .containsExactly(
-                        first.reservationId,
-                        second.reservationId
-                );
-    }
 
 
     private ReservationData createReservation(

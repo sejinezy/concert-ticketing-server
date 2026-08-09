@@ -1,8 +1,6 @@
 package com.ticketing.reservation.repository;
 
-import com.ticketing.reservation.repository.projection.ReservationExpirationTarget;
 import java.time.LocalDateTime;
-import java.util.List;
 
 public interface ReservationQueryRepository {
 
@@ -14,10 +12,5 @@ public interface ReservationQueryRepository {
     long expireIfReserved(
             Long reservationId,
             LocalDateTime now
-    );
-
-    List<ReservationExpirationTarget> findExpirationTargets(
-            LocalDateTime now,
-            int batchSize
     );
 }
