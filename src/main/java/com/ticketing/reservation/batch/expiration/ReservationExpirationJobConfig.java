@@ -3,6 +3,7 @@ package com.ticketing.reservation.batch.expiration;
 import com.ticketing.reservation.repository.projection.ReservationExpirationTarget;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.builder.JobBuilder;
+import org.springframework.batch.core.job.parameters.RunIdIncrementer;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.step.builder.StepBuilder;
@@ -18,14 +19,13 @@ public class ReservationExpirationJobConfig {
     public static final String JOB_NAME = "reservationExpirationJob";
     public static final String STEP_NAME = "reservationExpirationStep";
 
-    private static final String CUTOFF_AT_PARAMETER = "cutoffAt";
-
     @Bean(name = JOB_NAME)
     public Job reservationExpirationJob(
             JobRepository jobRepository,
             @Qualifier(STEP_NAME) Step reservationExpirationStep
     ) {
         return new JobBuilder(JOB_NAME, jobRepository)
+                .incrementer(new RunIdIncrementer())
                 .start(reservationExpirationStep)
                 .build();
     }
@@ -36,6 +36,7 @@ public class ReservationExpirationJobConfig {
             PlatformTransactionManager transactionManager,
             ReservationExpirationItemReader itemReader,
             ReservationExpirationItemWriter itemWriter,
+            ReservationExpirationStepListener listener,
             @Value("${reservation.expiration.chunk-size:100}")
             int chunkSize
     ) {
@@ -44,6 +45,7 @@ public class ReservationExpirationJobConfig {
                 .<ReservationExpirationTarget, ReservationExpirationTarget>chunk(chunkSize)
                 .reader(itemReader)
                 .writer(itemWriter)
+                .listener(listener)
                 .transactionManager(transactionManager)
                 .build();
     }

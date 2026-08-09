@@ -1,11 +1,9 @@
 package com.ticketing.reservation.batch.expiration;
 
-import java.time.LocalDateTime;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.job.JobExecutionException;
-import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.stereotype.Component;
 
@@ -21,32 +19,15 @@ public class ReservationExpirationJobLauncher {
         this.reservationExpirationJob = reservationExpirationJob;
     }
 
-    public JobExecution launch(
-            LocalDateTime cutoffAt
-    ) throws JobExecutionException {
-
-        JobParameters jobParameters = new ReservationExpirationJobParameters(cutoffAt).toJobParameters();
+    public JobExecution launch() throws JobExecutionException {
 
         log.info(
-                "예약 만료 Job 실행을 시작합니다. "
-                        + "jobName={}, cutoffAt={}",
-                reservationExpirationJob.getName(),
-                cutoffAt
+                "예약 만료 Job 실행을 시작합니다. jobName={}",
+                reservationExpirationJob.getName()
         );
 
-        JobExecution jobExecution = jobOperator.start(reservationExpirationJob, jobParameters);
-
-        log.info(
-                "예약 만료 Job 실행 결과를 반환받았습니다. "
-                        + "jobExecutionId={}, status={}, "
-                        + "exitStatus={}, cutoffAt={}",
-                jobExecution.getId(),
-                jobExecution.getStatus(),
-                jobExecution.getExitStatus(),
-                cutoffAt
+        return jobOperator.startNextInstance(
+                reservationExpirationJob
         );
-
-        return jobExecution;
-
     }
 }

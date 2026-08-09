@@ -22,15 +22,17 @@ public class ReservationExpirationItemWriter implements ItemWriter<ReservationEx
 
     public ReservationExpirationItemWriter(
             ReservationExpirationProcessor expirationProcessor,
-            @Value("#{jobParameters['cutoffAt']}")
-            LocalDateTime cutoffAt
+            @Value(
+                    "#{stepExecutionContext['reservationExpiration.cutoffAt']}"
+            )
+            String cutoffAt
     ) {
         if (cutoffAt == null) {
             throw new IllegalArgumentException("cutoffAt JobParameter는 필수입니다.");
         }
 
         this.expirationProcessor = expirationProcessor;
-        this.cutoffAt = cutoffAt;
+        this.cutoffAt = LocalDateTime.parse(cutoffAt);
     }
 
     @Override

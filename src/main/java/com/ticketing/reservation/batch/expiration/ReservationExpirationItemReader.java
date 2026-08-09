@@ -22,8 +22,10 @@ public class ReservationExpirationItemReader extends JdbcPagingItemReader<Reserv
     public ReservationExpirationItemReader(
             DataSource dataSource,
 
-            @Value("#{jobParameters['cutoffAt']}")
-            LocalDateTime cutoffAt,
+            @Value(
+                    "#{stepExecutionContext['reservationExpiration.cutoffAt']}"
+            )
+            String cutoffAt,
 
             @Value("${reservation.expiration.chunk-size:100}")
             int pageSize
@@ -31,9 +33,7 @@ public class ReservationExpirationItemReader extends JdbcPagingItemReader<Reserv
     ) {
         super(dataSource, createQueryProvider());
 
-        if (cutoffAt == null) {
-            throw new IllegalArgumentException("cutoffAt JobParameter는 필수입니다.");
-        }
+        LocalDateTime cutoffDateTime = LocalDateTime.parse(cutoffAt);
 
         setName(READER_NAME);
         setPageSize(pageSize);
@@ -44,8 +44,9 @@ public class ReservationExpirationItemReader extends JdbcPagingItemReader<Reserv
                 Map.of(
                         "status",
                         ReservationStatus.RESERVED.name(),
+
                         "cutoffAt",
-                        cutoffAt
+                        cutoffDateTime
                 )
 
         );

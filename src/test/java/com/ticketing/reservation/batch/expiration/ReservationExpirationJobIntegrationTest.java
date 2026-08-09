@@ -1,7 +1,5 @@
 package com.ticketing.reservation.batch.expiration;
 
-import static org.assertj.core.api.Assertions.*;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.ticketing.event.domain.Event;
@@ -24,7 +22,9 @@ import com.ticketing.venue.domain.VenueSeat;
 import com.ticketing.venue.repository.VenueRepository;
 import com.ticketing.venue.repository.VenueSeatRepository;
 import jakarta.persistence.EntityManager;
+import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -35,7 +35,10 @@ import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.step.StepExecution;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -46,9 +49,19 @@ import org.springframework.transaction.support.TransactionTemplate;
         }
 )
 @ActiveProfiles("test")
-@Import(MySqlTestContainerConfig.class)
+@Import({
+        MySqlTestContainerConfig.class,
+        ReservationExpirationJobIntegrationTest.TestClockConfig.class
+})
 class ReservationExpirationJobIntegrationTest {
 
+    /*
+     * Batch 테스트에서 사용하는 고정된 현재 시각.
+     *
+     * 운영에서는 실제 현재 시각을 사용하지만,
+     * 테스트에서는 실행 시각에 따라 결과가 달라지지 않도록
+     * Clock을 BASE_CUTOFF_AT으로 고정한다.
+     */
     private static final LocalDateTime BASE_CUTOFF_AT =
             LocalDateTime.of(
                     2026,
@@ -57,6 +70,9 @@ class ReservationExpirationJobIntegrationTest {
                     17,
                     0
             );
+
+    private static final ZoneId TEST_ZONE_ID =
+            ZoneId.of("Asia/Seoul");
 
     @Autowired
     private ReservationExpirationJobLauncher jobLauncher;
@@ -108,12 +124,10 @@ class ReservationExpirationJobIntegrationTest {
 
     @Test
     void 만료_대상만_처리한다() throws Exception {
-        LocalDateTime cutoffAt =
-                BASE_CUTOFF_AT;
 
         ReservationData expiredBeforeCutoff =
                 createReservation(
-                        cutoffAt.minusMinutes(20),
+                        BASE_CUTOFF_AT.minusMinutes(20),
                         true
                 );
 
@@ -127,18 +141,18 @@ class ReservationExpirationJobIntegrationTest {
          */
         ReservationData expiredAtCutoff =
                 createReservation(
-                        cutoffAt.minusMinutes(10),
+                        BASE_CUTOFF_AT.minusMinutes(10),
                         true
                 );
 
         ReservationData notExpired =
                 createReservation(
-                        cutoffAt.minusMinutes(9),
+                        BASE_CUTOFF_AT.minusMinutes(9),
                         true
                 );
 
         JobExecution jobExecution =
-                jobLauncher.launch(cutoffAt);
+                jobLauncher.launch();
 
         StepExecution stepExecution =
                 findExpirationStep(jobExecution);
@@ -157,12 +171,12 @@ class ReservationExpirationJobIntegrationTest {
 
         assertExpired(
                 expiredBeforeCutoff,
-                cutoffAt
+                BASE_CUTOFF_AT
         );
 
         assertExpired(
                 expiredAtCutoff,
-                cutoffAt
+                BASE_CUTOFF_AT
         );
 
         assertReservationState(
@@ -171,16 +185,16 @@ class ReservationExpirationJobIntegrationTest {
                 PerformanceSeatStatus.RESERVED
         );
 
-        assertThat(findHistories(notExpired.reservationId()))
-                .isEmpty();
+        assertThat(
+                findHistories(
+                        notExpired.reservationId()
+                )
+        ).isEmpty();
     }
 
     @Test
     void chunk_size보다_많은_만료_대상을_모두_처리한다()
             throws Exception {
-
-        LocalDateTime cutoffAt =
-                BASE_CUTOFF_AT.plusMinutes(1);
 
         List<ReservationData> expirationTargets =
                 new ArrayList<>();
@@ -188,7 +202,7 @@ class ReservationExpirationJobIntegrationTest {
         for (int index = 0; index < 5; index++) {
             expirationTargets.add(
                     createReservation(
-                            cutoffAt
+                            BASE_CUTOFF_AT
                                     .minusMinutes(20)
                                     .plusSeconds(index),
                             true
@@ -197,7 +211,7 @@ class ReservationExpirationJobIntegrationTest {
         }
 
         JobExecution jobExecution =
-                jobLauncher.launch(cutoffAt);
+                jobLauncher.launch();
 
         StepExecution stepExecution =
                 findExpirationStep(jobExecution);
@@ -225,7 +239,7 @@ class ReservationExpirationJobIntegrationTest {
                         target ->
                                 assertExpired(
                                         target,
-                                        cutoffAt
+                                        BASE_CUTOFF_AT
                                 )
                 );
     }
@@ -234,17 +248,14 @@ class ReservationExpirationJobIntegrationTest {
     void 만료_대상이_없으면_정상_완료한다()
             throws Exception {
 
-        LocalDateTime cutoffAt =
-                BASE_CUTOFF_AT.plusMinutes(2);
-
         ReservationData notExpired =
                 createReservation(
-                        cutoffAt.minusMinutes(5),
+                        BASE_CUTOFF_AT.minusMinutes(5),
                         true
                 );
 
         JobExecution jobExecution =
-                jobLauncher.launch(cutoffAt);
+                jobLauncher.launch();
 
         StepExecution stepExecution =
                 findExpirationStep(jobExecution);
@@ -270,16 +281,16 @@ class ReservationExpirationJobIntegrationTest {
                 PerformanceSeatStatus.RESERVED
         );
 
-        assertThat(findHistories(notExpired.reservationId()))
-                .isEmpty();
+        assertThat(
+                findHistories(
+                        notExpired.reservationId()
+                )
+        ).isEmpty();
     }
 
     @Test
     void 실패한_chunk만_롤백하고_이전_chunk는_유지한다()
             throws Exception {
-
-        LocalDateTime cutoffAt =
-                BASE_CUTOFF_AT.plusMinutes(3);
 
         /*
          * chunk-size = 2
@@ -294,30 +305,30 @@ class ReservationExpirationJobIntegrationTest {
          */
         ReservationData firstChunkFirst =
                 createReservation(
-                        cutoffAt.minusMinutes(20),
+                        BASE_CUTOFF_AT.minusMinutes(20),
                         true
                 );
 
         ReservationData firstChunkSecond =
                 createReservation(
-                        cutoffAt.minusMinutes(20),
+                        BASE_CUTOFF_AT.minusMinutes(20),
                         true
                 );
 
         ReservationData secondChunkFirst =
                 createReservation(
-                        cutoffAt.minusMinutes(20),
+                        BASE_CUTOFF_AT.minusMinutes(20),
                         true
                 );
 
         ReservationData secondChunkFailureTarget =
                 createReservation(
-                        cutoffAt.minusMinutes(20),
+                        BASE_CUTOFF_AT.minusMinutes(20),
                         false
                 );
 
         JobExecution jobExecution =
-                jobLauncher.launch(cutoffAt);
+                jobLauncher.launch();
 
         StepExecution stepExecution =
                 findExpirationStep(jobExecution);
@@ -336,12 +347,12 @@ class ReservationExpirationJobIntegrationTest {
          */
         assertExpired(
                 firstChunkFirst,
-                cutoffAt
+                BASE_CUTOFF_AT
         );
 
         assertExpired(
                 firstChunkSecond,
-                cutoffAt
+                BASE_CUTOFF_AT
         );
 
         /*
@@ -384,6 +395,41 @@ class ReservationExpirationJobIntegrationTest {
          */
         assertThat(stepExecution.getWriteCount())
                 .isEqualTo(2L);
+    }
+
+    @Test
+    void 실행_기준_시각을_StepExecutionContext에_저장한다()
+            throws Exception {
+
+        JobExecution jobExecution =
+                jobLauncher.launch();
+
+        StepExecution stepExecution =
+                findExpirationStep(jobExecution);
+
+        assertThat(jobExecution.getStatus())
+                .isEqualTo(BatchStatus.COMPLETED);
+
+        assertThat(stepExecution.getStatus())
+                .isEqualTo(BatchStatus.COMPLETED);
+
+        /*
+         * cutoffAt은 더 이상 JobParameter가 아니다.
+         *
+         * Step 시작 시 Clock을 통해 결정한 실행 기준 시각을
+         * StepExecutionContext에 저장하고,
+         * Reader와 Writer가 동일한 값을 사용한다.
+         */
+        String cutoffAt =
+                stepExecution
+                        .getExecutionContext()
+                        .getString(
+                                ReservationExpirationStepListener
+                                        .CUTOFF_AT
+                        );
+
+        assertThat(LocalDateTime.parse(cutoffAt))
+                .isEqualTo(BASE_CUTOFF_AT);
     }
 
     private void createCommonFixture() {
@@ -581,9 +627,8 @@ class ReservationExpirationJobIntegrationTest {
                 .isNull();
 
         /*
-         * Job 실행 중 현재 시각을 새로 계산하지 않고,
-         * JobParameter로 전달한 동일한 cutoffAt을
-         * 상태 변경 이력에도 사용했는지 확인한다.
+         * Step 시작 시 결정한 cutoffAt을
+         * Reader와 만료 처리 전체에서 동일하게 사용했는지 확인한다.
          */
         assertThat(history.getChangedAt())
                 .isEqualTo(cutoffAt);
@@ -656,4 +701,24 @@ class ReservationExpirationJobIntegrationTest {
     ) {
     }
 
+    /*
+     * 테스트에서는 실제 시스템 시간을 사용하지 않는다.
+     *
+     * 예약 만료 여부가 "현재 시각"에 의존하기 때문에
+     * Clock을 고정해서 경계값 테스트를 항상 동일하게 재현한다.
+     */
+    @TestConfiguration(proxyBeanMethods = false)
+    static class TestClockConfig {
+
+        @Bean
+        @Primary
+        Clock testClock() {
+            return Clock.fixed(
+                    BASE_CUTOFF_AT
+                            .atZone(TEST_ZONE_ID)
+                            .toInstant(),
+                    TEST_ZONE_ID
+            );
+        }
+    }
 }
