@@ -1,1 +1,5 @@
 rootProject.name = 'concert-ticketing-server'
+
+include 'core'
+include 'api'
+include 'batch'

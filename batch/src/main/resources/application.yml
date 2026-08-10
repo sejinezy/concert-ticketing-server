@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: concert-ticketing-batch
+
+  main:
+    web-application-type: none
+
+  batch:
+    job:
+      enabled: false
+
+reservation:
+  expiration:
+    chunk-size: 2
