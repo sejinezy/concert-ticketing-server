@@ -1,6 +1,6 @@
 package com.ticketing.event.presentation.dto;
 
-import com.ticketing.event.domain.Event;
+import com.ticketing.event.application.result.EventResult;
 import java.time.LocalDateTime;
 
 public record EventResponse(
@@ -11,13 +11,13 @@ public record EventResponse(
         LocalDateTime updatedAt
 ) {
 
-    public static EventResponse from(Event event) {
+    public static EventResponse from(EventResult result) {
         return new EventResponse(
-                event.getId(),
-                event.getTitle(),
-                event.getDescription(),
-                event.getCreatedAt(),
-                event.getUpdatedAt()
+                result.id(),
+                result.title(),
+                result.description(),
+                result.createdAt(),
+                result.updatedAt()
         );
     }
 }

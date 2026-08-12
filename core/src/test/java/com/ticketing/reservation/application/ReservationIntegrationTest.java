@@ -11,14 +11,14 @@ import com.ticketing.performance.domain.PerformanceSeat;
 import com.ticketing.performance.domain.PerformanceSeatStatus;
 import com.ticketing.performance.repository.PerformanceRepository;
 import com.ticketing.performance.repository.PerformanceSeatRepository;
+import com.ticketing.reservation.application.command.ReservationCancelCommand;
+import com.ticketing.reservation.application.command.ReservationCreateCommand;
+import com.ticketing.reservation.application.result.ReservationResult;
 import com.ticketing.reservation.domain.Reservation;
 import com.ticketing.reservation.domain.ReservationStatus;
 import com.ticketing.reservation.domain.ReservationStatusChangeActorType;
 import com.ticketing.reservation.domain.ReservationStatusChangeReason;
 import com.ticketing.reservation.domain.ReservationStatusHistory;
-import com.ticketing.reservation.presentation.dto.ReservationCancelRequest;
-import com.ticketing.reservation.presentation.dto.ReservationCreateRequest;
-import com.ticketing.reservation.presentation.dto.ReservationResponse;
 import com.ticketing.reservation.repository.ReservationRepository;
 import com.ticketing.reservation.repository.ReservationStatusHistoryRepository;
 import com.ticketing.reservation.repository.projection.ReservationExpirationTarget;
@@ -118,23 +118,24 @@ public class ReservationIntegrationTest {
         UUID queueEntryId = UUID.randomUUID();
         String idempotencyKey = UUID.randomUUID().toString();
 
-        ReservationResponse response =
-                reservationService.create(
+        ReservationCreateCommand command =
+                new ReservationCreateCommand(
                         idempotencyKey,
                         performanceSeatId,
-                        new ReservationCreateRequest(
-                                queueEntryId
-                        )
+                        queueEntryId
                 );
 
+        ReservationResult result =
+                reservationService.create(command);
+
         Reservation reservation =
-                findReservation(response.reservationId());
+                findReservation(result.reservationId());
 
         PerformanceSeat performanceSeat =
                 findPerformanceSeat(performanceSeatId);
 
         List<ReservationStatusHistory> histories =
-                findHistories(response.reservationId());
+                findHistories(result.reservationId());
 
         assertThat(reservation.getStatus())
                 .isEqualTo(ReservationStatus.RESERVED);
@@ -172,8 +173,8 @@ public class ReservationIntegrationTest {
                 );
 
         reservationService.cancel(
-                data.reservationId(),
-                new ReservationCancelRequest(
+                new ReservationCancelCommand(
+                        data.reservationId(),
                         data.queueEntryId()
                 )
         );
@@ -356,8 +357,8 @@ public class ReservationIntegrationTest {
 
                         try {
                             reservationService.cancel(
-                                    data.reservationId(),
-                                    new ReservationCancelRequest(
+                                    new ReservationCancelCommand(
+                                            data.reservationId(),
                                             data.queueEntryId()
                                     )
                             );

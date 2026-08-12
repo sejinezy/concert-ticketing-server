@@ -10,7 +10,7 @@ import com.ticketing.performance.domain.PerformanceSeat;
 import com.ticketing.performance.domain.PerformanceSeatStatus;
 import com.ticketing.performance.repository.PerformanceRepository;
 import com.ticketing.performance.repository.PerformanceSeatRepository;
-import com.ticketing.reservation.presentation.dto.ReservationCreateRequest;
+import com.ticketing.reservation.application.command.ReservationCreateCommand;
 import com.ticketing.reservation.repository.ReservationRepository;
 import com.ticketing.reservation.repository.ReservationStatusHistoryRepository;
 import com.ticketing.support.error.CoreException;
@@ -107,9 +107,9 @@ public class ReservationConcurrencyTest {
 
                             try {
                                 reservationService.create(
-                                        UUID.randomUUID().toString(),
-                                        performanceSeatId,
-                                        new ReservationCreateRequest(
+                                        new ReservationCreateCommand(
+                                                UUID.randomUUID().toString(),
+                                                performanceSeatId,
                                                 UUID.randomUUID()
                                         )
                                 );

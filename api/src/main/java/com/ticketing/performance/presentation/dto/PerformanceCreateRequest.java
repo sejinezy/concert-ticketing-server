@@ -1,5 +1,6 @@
 package com.ticketing.performance.presentation.dto;
 
+import com.ticketing.performance.application.command.PerformanceCreateCommand;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
@@ -10,4 +11,14 @@ public record PerformanceCreateRequest(
         @NotNull(message = "예매 오픈 시간은 필수입니다.") LocalDateTime bookingOpenAt,
         @NotNull(message = "예매 종료 시간은 필수입니다.") LocalDateTime bookingCloseAt
         ) {
+
+        public PerformanceCreateCommand toCommand() {
+                return new PerformanceCreateCommand(
+                        eventId,
+                        venueId,
+                        performanceStartAt,
+                        bookingOpenAt,
+                        bookingCloseAt
+                );
+        }
 }

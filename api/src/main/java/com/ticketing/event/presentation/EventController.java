@@ -1,6 +1,8 @@
 package com.ticketing.event.presentation;
 
 import com.ticketing.event.application.EventService;
+import com.ticketing.event.application.result.EventCreateResult;
+import com.ticketing.event.application.result.EventResult;
 import com.ticketing.event.presentation.dto.EventCreateRequest;
 import com.ticketing.event.presentation.dto.EventCreateResponse;
 import com.ticketing.event.presentation.dto.EventResponse;
@@ -30,14 +32,19 @@ public class EventController {
     public ApiResponse<EventCreateResponse> createEvent(
             @Valid @RequestBody EventCreateRequest request
     ) {
-        EventCreateResponse response = eventService.createEvent(request);
+        EventCreateResult result = eventService.createEvent(request.toCommand());
 
-        return ApiResponse.success(response);
+        return ApiResponse.success(EventCreateResponse.from(result));
     }
 
     @GetMapping
     public ApiResponse<List<EventResponse>> getEvents() {
-        List<EventResponse> response = eventService.getEvents();
+        List<EventResponse> response =
+                eventService.getEvents()
+                        .stream()
+                        .map(EventResponse::from)
+                        .toList();
+
         return ApiResponse.success(response);
     }
 
@@ -45,8 +52,8 @@ public class EventController {
     public ApiResponse<EventResponse> getEvent(
             @PathVariable Long eventId
     ) {
-        EventResponse response = eventService.getEvent(eventId);
-        return ApiResponse.success(response);
+        EventResult result = eventService.getEvent(eventId);
+        return ApiResponse.success(EventResponse.from(result));
     }
 
     @PatchMapping("/{eventId}")
@@ -54,7 +61,8 @@ public class EventController {
             @PathVariable Long eventId,
             @Valid @RequestBody EventUpdateRequest request
     ) {
-        EventResponse response = eventService.updateEvent(eventId, request);
-        return ApiResponse.success(response);
+        EventResult result = eventService.updateEvent(request.toCommand(eventId));
+        return ApiResponse.success(EventResponse.from(result));
     }
+
 }

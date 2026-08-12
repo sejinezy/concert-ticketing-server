@@ -1,13 +1,10 @@
-package com.ticketing.performance.presentation.dto;
+package com.ticketing.performance.application.command;
 
 import java.time.LocalDateTime;
 
-public record PerformanceResponse(
-        Long id,
+public record PerformanceCreateCommand(
         Long eventId,
-        String eventTitle,
         Long venueId,
-        String venueName,
         LocalDateTime performanceStartAt,
         LocalDateTime bookingOpenAt,
         LocalDateTime bookingCloseAt

@@ -1,9 +1,9 @@
 package com.ticketing.performance.application;
 
+import com.ticketing.performance.application.result.PerformanceSeatCreateResult;
+import com.ticketing.performance.application.result.PerformanceSeatResult;
 import com.ticketing.performance.domain.Performance;
 import com.ticketing.performance.domain.PerformanceSeat;
-import com.ticketing.performance.presentation.dto.PerformanceSeatCreateResponse;
-import com.ticketing.performance.presentation.dto.PerformanceSeatResponse;
 import com.ticketing.performance.repository.PerformanceRepository;
 import com.ticketing.performance.repository.PerformanceSeatRepository;
 import com.ticketing.support.error.CoreException;
@@ -32,7 +32,7 @@ public class PerformanceSeatService {
     }
 
     @Transactional
-    public PerformanceSeatCreateResponse create(Long performanceId) {
+    public PerformanceSeatCreateResult create(Long performanceId) {
         Performance performance = getPerformance(performanceId);
 
         validatePerformanceSeatsNotCreated(performanceId);
@@ -53,11 +53,11 @@ public class PerformanceSeatService {
 
         savePerformanceSeats(performanceSeats);
 
-        return new PerformanceSeatCreateResponse(performanceId, (long) performanceSeats.size());
+        return new PerformanceSeatCreateResult(performanceId, (long) performanceSeats.size());
 
     }
 
-    public List<PerformanceSeatResponse> getPerformanceSeats(Long performanceId) {
+    public List<PerformanceSeatResult> getPerformanceSeats(Long performanceId) {
         validatePerformanceExists(performanceId);
 
         return performanceSeatRepository.findAllByPerformanceId(performanceId);

@@ -1,10 +1,10 @@
 package com.ticketing.event.application;
 
+import com.ticketing.event.application.command.EventCreateCommand;
+import com.ticketing.event.application.command.EventUpdateCommand;
+import com.ticketing.event.application.result.EventCreateResult;
+import com.ticketing.event.application.result.EventResult;
 import com.ticketing.event.domain.Event;
-import com.ticketing.event.presentation.dto.EventCreateRequest;
-import com.ticketing.event.presentation.dto.EventCreateResponse;
-import com.ticketing.event.presentation.dto.EventResponse;
-import com.ticketing.event.presentation.dto.EventUpdateRequest;
 import com.ticketing.event.repository.EventRepository;
 import com.ticketing.support.error.CoreException;
 import com.ticketing.support.error.ErrorType;
@@ -23,39 +23,38 @@ public class EventService {
     }
 
     @Transactional
-    public EventCreateResponse createEvent(EventCreateRequest request) {
+    public EventCreateResult createEvent(EventCreateCommand command) {
         Event event = Event.create(
-                request.title(),
-                request.description()
+                command.title(),
+                command.description()
         );
 
         Event savedEvent = eventRepository.save(event);
 
-        return new EventCreateResponse(savedEvent.getId());
+        return new EventCreateResult(savedEvent.getId());
     }
 
-    public List<EventResponse> getEvents() {
+    public List<EventResult> getEvents() {
         return eventRepository.findAll()
                 .stream()
-                .map(EventResponse::from)
+                .map(EventResult::from)
                 .toList();
     }
 
-    public EventResponse getEvent(Long eventId) {
+    public EventResult getEvent(Long eventId) {
         Event event = getEventEntity(eventId);
 
-        return EventResponse.from(event);
+        return EventResult.from(event);
     }
 
     @Transactional
-    public EventResponse updateEvent(Long eventId, EventUpdateRequest request) {
-        Event event = getEventEntity(eventId);
-
+    public EventResult updateEvent(EventUpdateCommand command) {
+        Event event = getEventEntity(command.eventId());
         event.update(
-                request.title(),
-                request.description()
+                command.title(),
+                command.description()
         );
-        return EventResponse.from(event);
+        return EventResult.from(event);
     }
 
     private Event getEventEntity(Long eventId) {

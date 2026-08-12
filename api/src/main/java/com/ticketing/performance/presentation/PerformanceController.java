@@ -1,6 +1,8 @@
 package com.ticketing.performance.presentation;
 
 import com.ticketing.performance.application.PerformanceService;
+import com.ticketing.performance.application.result.PerformanceCreateResult;
+import com.ticketing.performance.application.result.PerformanceResult;
 import com.ticketing.performance.presentation.dto.PerformanceCreateRequest;
 import com.ticketing.performance.presentation.dto.PerformanceCreateResponse;
 import com.ticketing.performance.presentation.dto.PerformanceResponse;
@@ -28,25 +30,35 @@ public class PerformanceController {
     public ApiResponse<PerformanceCreateResponse> create(
             @Valid @RequestBody PerformanceCreateRequest request
     ) {
-        PerformanceCreateResponse response = performanceService.create(request);
+        PerformanceCreateResult result =
+                performanceService.create(
+                        request.toCommand()
+                );
 
-        return ApiResponse.success(response);
+        return ApiResponse.success(
+                PerformanceCreateResponse.from(result)
+        );
     }
 
     @GetMapping("/api/admin/performances/{performanceId}")
     public ApiResponse<PerformanceResponse> getById(
             @PathVariable Long performanceId
     ) {
-        PerformanceResponse response = performanceService.getById(performanceId);
+        PerformanceResult result = performanceService.getById(performanceId);
 
-        return ApiResponse.success(response);
+        return ApiResponse.success(PerformanceResponse.from(result));
     }
 
     @GetMapping("/api/events/{eventId}/performances")
     public ApiResponse<List<PerformanceResponse>> getByEventId(
             @PathVariable Long eventId
     ) {
-        List<PerformanceResponse> response = performanceService.getByEventId(eventId);
+        List<PerformanceResponse> response =
+                performanceService
+                        .getByEventId(eventId)
+                        .stream()
+                        .map(PerformanceResponse::from)
+                        .toList();
 
         return ApiResponse.success(response);
     }
@@ -56,8 +68,9 @@ public class PerformanceController {
             @PathVariable Long performanceId,
             @Valid @RequestBody PerformanceUpdateRequest request
     ) {
-        PerformanceResponse response = performanceService.update(performanceId, request);
+        PerformanceResult result = performanceService.update(request.toCommand(performanceId));
 
-        return ApiResponse.success(response);
+        return ApiResponse.success(PerformanceResponse.from(result));
     }
+
 }
