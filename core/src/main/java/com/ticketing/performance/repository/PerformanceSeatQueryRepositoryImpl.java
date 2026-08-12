@@ -5,8 +5,8 @@ import static com.ticketing.venue.domain.QVenueSeat.venueSeat;
 
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import com.ticketing.performance.application.result.PerformanceSeatResult;
 import com.ticketing.performance.domain.PerformanceSeatStatus;
-import com.ticketing.performance.presentation.dto.PerformanceSeatResponse;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -19,10 +19,10 @@ public class PerformanceSeatQueryRepositoryImpl implements PerformanceSeatQueryR
 
 
     @Override
-    public List<PerformanceSeatResponse> findAllByPerformanceId(Long performanceId) {
+    public List<PerformanceSeatResult> findAllByPerformanceId(Long performanceId) {
         return queryFactory
                 .select(Projections.constructor(
-                        PerformanceSeatResponse.class,
+                        PerformanceSeatResult.class,
                         performanceSeat.id,
                         venueSeat.id,
                         venueSeat.section,

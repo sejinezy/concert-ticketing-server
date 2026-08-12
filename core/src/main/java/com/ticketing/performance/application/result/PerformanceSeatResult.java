@@ -1,8 +1,8 @@
-package com.ticketing.performance.presentation.dto;
+package com.ticketing.performance.application.result;
 
 import com.ticketing.performance.domain.PerformanceSeatStatus;
 
-public record PerformanceSeatResponse(
+public record PerformanceSeatResult(
         Long performanceSeatId,
         Long venueSeatId,
         String section,

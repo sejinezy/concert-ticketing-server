@@ -12,13 +12,13 @@ import com.ticketing.idempotency.domain.IdempotencyOperation;
 import com.ticketing.idempotency.domain.IdempotencyRequest;
 import com.ticketing.performance.domain.PerformanceSeat;
 import com.ticketing.performance.repository.PerformanceSeatRepository;
+import com.ticketing.reservation.application.command.ReservationCancelCommand;
+import com.ticketing.reservation.application.command.ReservationCreateCommand;
 import com.ticketing.reservation.domain.Reservation;
 import com.ticketing.reservation.domain.ReservationStatus;
 import com.ticketing.reservation.domain.ReservationStatusChangeActorType;
 import com.ticketing.reservation.domain.ReservationStatusChangeReason;
 import com.ticketing.reservation.domain.ReservationStatusHistory;
-import com.ticketing.reservation.presentation.dto.ReservationCancelRequest;
-import com.ticketing.reservation.presentation.dto.ReservationCreateRequest;
 import com.ticketing.reservation.repository.ReservationRepository;
 import com.ticketing.reservation.repository.ReservationStatusHistoryRepository;
 import com.ticketing.support.error.CoreException;
@@ -72,8 +72,12 @@ class ReservationServiceTest {
     void 예약을_생성하고_RESERVED_상태_이력을_저장한다() {
         UUID queueEntryId = UUID.randomUUID();
 
-        ReservationCreateRequest request =
-                new ReservationCreateRequest(queueEntryId);
+        ReservationCreateCommand command =
+                new ReservationCreateCommand(
+                        IDEMPOTENCY_KEY,
+                        PERFORMANCE_SEAT_ID,
+                        queueEntryId
+                );
 
         IdempotencyExecution execution =
                 IdempotencyExecution.first(
@@ -122,7 +126,7 @@ class ReservationServiceTest {
                     return savedReservation;
                 });
 
-        reservationService.create(IDEMPOTENCY_KEY, PERFORMANCE_SEAT_ID, request);
+        reservationService.create(command);
 
         ArgumentCaptor<ReservationStatusHistory> historyCaptor =
                 ArgumentCaptor.forClass(
@@ -172,7 +176,12 @@ class ReservationServiceTest {
     @Test
     void 예약을_취소하고_회차_좌석을_복구하고_상태_이력을_저장한다() {
         UUID queueEntryId = UUID.randomUUID();
-        ReservationCancelRequest request = new ReservationCancelRequest(queueEntryId);
+
+        ReservationCancelCommand command =
+                new ReservationCancelCommand(
+                        RESERVATION_ID,
+                        queueEntryId
+                );
 
         when(reservationRepository.findById(RESERVATION_ID))
                 .thenReturn(Optional.of(reservation));
@@ -196,7 +205,7 @@ class ReservationServiceTest {
                 any(LocalDateTime.class)
         )).thenReturn(1L);
 
-        reservationService.cancel(RESERVATION_ID, request);
+        reservationService.cancel(command);
 
         verify(reservation).validateOwner(queueEntryId);
 
@@ -255,14 +264,19 @@ class ReservationServiceTest {
 
     @Test
     void 존재하지_않는_예약은_취소할_수_없고_이력도_저장하지_않는다() {
-        ReservationCancelRequest request =
-                new ReservationCancelRequest(UUID.randomUUID());
+        UUID queueEntryId = UUID.randomUUID();
+
+        ReservationCancelCommand command =
+                new ReservationCancelCommand(
+                        RESERVATION_ID,
+                        queueEntryId
+                );
 
         when(reservationRepository.findById(RESERVATION_ID))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() ->
-                reservationService.cancel(RESERVATION_ID, request))
+                reservationService.cancel(command))
                 .isInstanceOfSatisfying(
                         CoreException.class,
                         exception -> assertThat(exception.getErrorType())
@@ -286,7 +300,12 @@ class ReservationServiceTest {
     @Test
     void 예약_생성자와_queueEntryId가_다르면_취소할_수_없고_이력도_저장하지_않는다() {
         UUID queueEntryId = UUID.randomUUID();
-        ReservationCancelRequest request = new ReservationCancelRequest(queueEntryId);
+
+        ReservationCancelCommand command =
+                new ReservationCancelCommand(
+                        RESERVATION_ID,
+                        queueEntryId
+                );
 
         when(reservationRepository.findById(RESERVATION_ID))
                 .thenReturn(Optional.of(reservation));
@@ -295,7 +314,7 @@ class ReservationServiceTest {
                 .when(reservation).validateOwner(queueEntryId);
 
         assertThatThrownBy(() ->
-                reservationService.cancel(RESERVATION_ID, request))
+                reservationService.cancel(command))
                 .isInstanceOfSatisfying(
                         CoreException.class,
                         exception -> assertThat(exception.getErrorType())
@@ -320,8 +339,11 @@ class ReservationServiceTest {
     void 이미_상태가_변경된_예약은_취소할_수_없고_이력도_저장하지_않는다() {
         UUID queueEntryId = UUID.randomUUID();
 
-        ReservationCancelRequest request =
-                new ReservationCancelRequest(queueEntryId);
+        ReservationCancelCommand command =
+                new ReservationCancelCommand(
+                        RESERVATION_ID,
+                        queueEntryId
+                );
 
         when(reservationRepository.findById(RESERVATION_ID))
                 .thenReturn(Optional.of(reservation));
@@ -332,7 +354,7 @@ class ReservationServiceTest {
         )).thenReturn(0L);
 
         assertThatThrownBy(() ->
-                reservationService.cancel(RESERVATION_ID, request))
+                reservationService.cancel(command))
                 .isInstanceOfSatisfying(
                         CoreException.class,
                         exception -> assertThat(exception.getErrorType())
@@ -348,7 +370,12 @@ class ReservationServiceTest {
     @Test
     void 좌석_복구에_실패하면_예외가_발생하고_이력도_저장하지_않는다() {
         UUID queueEntryId = UUID.randomUUID();
-        ReservationCancelRequest request = new ReservationCancelRequest(queueEntryId);
+
+        ReservationCancelCommand command =
+                new ReservationCancelCommand(
+                        RESERVATION_ID,
+                        queueEntryId
+                );
 
         when(reservationRepository.findById(RESERVATION_ID))
                 .thenReturn(Optional.of(reservation));
@@ -370,7 +397,7 @@ class ReservationServiceTest {
         )).thenReturn(0L);
 
         assertThatThrownBy(() ->
-                reservationService.cancel(RESERVATION_ID, request))
+                reservationService.cancel(command))
                 .isInstanceOfSatisfying(
                         CoreException.class,
                         exception -> assertThat(exception.getErrorType())

@@ -6,7 +6,7 @@ import static com.ticketing.venue.domain.QVenue.venue;
 
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import com.ticketing.performance.presentation.dto.PerformanceResponse;
+import com.ticketing.performance.application.result.PerformanceResult;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -19,10 +19,10 @@ public class PerformanceQueryRepositoryImpl implements PerformanceQueryRepositor
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public Optional<PerformanceResponse> findResponseById(Long performanceId) {
-        PerformanceResponse response = queryFactory
+    public Optional<PerformanceResult> findResponseById(Long performanceId) {
+        PerformanceResult result = queryFactory
                 .select(Projections.constructor(
-                        PerformanceResponse.class,
+                        PerformanceResult.class,
                         performance.id,
                         event.id,
                         event.title,
@@ -38,14 +38,14 @@ public class PerformanceQueryRepositoryImpl implements PerformanceQueryRepositor
                 .where(performance.id.eq(performanceId))
                 .fetchOne();
 
-        return Optional.ofNullable(response);
+        return Optional.ofNullable(result);
     }
 
     @Override
-    public List<PerformanceResponse> findResponsesByEventId(Long eventId) {
+    public List<PerformanceResult> findResponsesByEventId(Long eventId) {
         return queryFactory
                 .select(Projections.constructor(
-                        PerformanceResponse.class,
+                        PerformanceResult.class,
                         performance.id,
                         event.id,
                         event.title,

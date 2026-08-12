@@ -1,11 +1,11 @@
-package com.ticketing.reservation.presentation.dto;
+package com.ticketing.reservation.application.result;
 
 import com.ticketing.reservation.domain.Reservation;
 import com.ticketing.reservation.domain.ReservationStatus;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-public record ReservationResponse(
+public record ReservationResult(
         Long reservationId,
         UUID queueEntryId,
         Long performanceSeatId,
@@ -13,10 +13,8 @@ public record ReservationResponse(
         LocalDateTime expiresAt
 ) {
 
-    public static ReservationResponse from(
-            Reservation reservation
-    ) {
-        return new ReservationResponse(
+    public static ReservationResult from(Reservation reservation) {
+        return new ReservationResult(
                 reservation.getId(),
                 reservation.getQueueEntryId(),
                 reservation.getPerformanceSeat().getId(),
@@ -24,4 +22,5 @@ public record ReservationResponse(
                 reservation.getExpiresAt()
         );
     }
+
 }

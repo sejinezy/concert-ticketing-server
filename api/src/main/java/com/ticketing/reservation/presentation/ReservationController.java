@@ -1,6 +1,7 @@
 package com.ticketing.reservation.presentation;
 
 import com.ticketing.reservation.application.ReservationService;
+import com.ticketing.reservation.application.result.ReservationResult;
 import com.ticketing.reservation.presentation.dto.ReservationCancelRequest;
 import com.ticketing.reservation.presentation.dto.ReservationCreateRequest;
 import com.ticketing.reservation.presentation.dto.ReservationResponse;
@@ -34,20 +35,23 @@ public class ReservationController {
                     required = false
             )
             String idempotencyKey,
-
             @PathVariable Long performanceSeatId,
             @Valid @RequestBody ReservationCreateRequest request
     ) {
-        ReservationResponse response = reservationService.create(idempotencyKey,performanceSeatId, request);
+        ReservationResult result = reservationService.create(
+                request.toCommand(idempotencyKey, performanceSeatId)
+        );
 
-        return ApiResponse.success(response);
+        return ApiResponse.success(ReservationResponse.from(result));
     }
 
     @GetMapping("/reservations/{reservationId}")
     public ApiResponse<ReservationResponse> get(
             @PathVariable Long reservationId
     ) {
-        return ApiResponse.success(reservationService.get(reservationId));
+        ReservationResult result = reservationService.get(reservationId);
+
+        return ApiResponse.success(ReservationResponse.from(result));
     }
 
     @PatchMapping("/reservations/{reservationId}/cancel")
@@ -55,7 +59,7 @@ public class ReservationController {
             @PathVariable Long reservationId,
             @Valid @RequestBody ReservationCancelRequest request
     ) {
-        reservationService.cancel(reservationId, request);
+        reservationService.cancel(request.toCommand(reservationId));
 
         return ApiResponse.success();
     }

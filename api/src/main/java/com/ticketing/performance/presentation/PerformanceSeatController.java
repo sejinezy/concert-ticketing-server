@@ -1,6 +1,8 @@
 package com.ticketing.performance.presentation;
 
 import com.ticketing.performance.application.PerformanceSeatService;
+import com.ticketing.performance.application.result.PerformanceSeatCreateResult;
+import com.ticketing.performance.application.result.PerformanceSeatResult;
 import com.ticketing.performance.presentation.dto.PerformanceSeatCreateResponse;
 import com.ticketing.performance.presentation.dto.PerformanceSeatResponse;
 import com.ticketing.support.response.ApiResponse;
@@ -25,16 +27,20 @@ public class PerformanceSeatController {
     public ApiResponse<PerformanceSeatCreateResponse> create(
             @PathVariable Long performanceId
     ) {
-        PerformanceSeatCreateResponse response = performanceSeatService.create(performanceId);
+        PerformanceSeatCreateResult result = performanceSeatService.create(performanceId);
 
-        return ApiResponse.success(response);
+        return ApiResponse.success(PerformanceSeatCreateResponse.from(result));
     }
 
     @GetMapping("/performances/{performanceId}/seats")
     public ApiResponse<List<PerformanceSeatResponse>> getPerformanceSeats(
             @PathVariable Long performanceId
     ) {
-        List<PerformanceSeatResponse> response = performanceSeatService.getPerformanceSeats(performanceId);
+        List<PerformanceSeatResult> results = performanceSeatService.getPerformanceSeats(performanceId);
+
+        List<PerformanceSeatResponse> response = results.stream()
+                .map(PerformanceSeatResponse::from)
+                .toList();
 
         return ApiResponse.success(response);
     }

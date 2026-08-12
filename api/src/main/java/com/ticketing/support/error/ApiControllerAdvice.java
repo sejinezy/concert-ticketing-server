@@ -27,7 +27,7 @@ public class ApiControllerAdvice {
         }
 
         return ResponseEntity
-                .status(errorType.getStatus())
+                .status(ErrorTypeHttpStatusMapper.resolve(errorType))
                 .body(ApiResponse.error(errorType, exception.getData()));
     }
 
@@ -42,7 +42,7 @@ public class ApiControllerAdvice {
                 .orElse(ErrorType.INVALID_REQUEST.getMessage());
 
         return ResponseEntity
-                .status(ErrorType.INVALID_REQUEST.getStatus())
+                .status(ErrorTypeHttpStatusMapper.resolve(ErrorType.INVALID_REQUEST))
                 .body(ApiResponse.error(ErrorType.INVALID_REQUEST, message));
     }
 
@@ -51,7 +51,7 @@ public class ApiControllerAdvice {
         log.error("Exception: {}", exception.getMessage(), exception);
 
         return ResponseEntity
-                .status(ErrorType.DEFAULT_ERROR.getStatus())
+                .status(ErrorTypeHttpStatusMapper.resolve(ErrorType.DEFAULT_ERROR))
                 .body(ApiResponse.error(ErrorType.DEFAULT_ERROR));
     }
 }

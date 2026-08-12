@@ -1,5 +1,6 @@
 package com.ticketing.event.presentation.dto;
 
+import com.ticketing.event.application.command.EventCreateCommand;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -9,4 +10,8 @@ public record EventCreateRequest(
         String title,
         String description
 ) {
+
+        public EventCreateCommand toCommand() {
+                return new EventCreateCommand(title, description);
+        }
 }
