@@ -3,6 +3,7 @@ package com.ticketing.reservation.batch.expiration;
 import com.ticketing.reservation.domain.ReservationStatus;
 import com.ticketing.reservation.repository.projection.ReservationExpirationTarget;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import javax.sql.DataSource;
 import org.springframework.batch.core.configuration.annotation.StepScope;
@@ -66,7 +67,8 @@ public class ReservationExpirationItemReader extends JdbcPagingItemReader<Reserv
         queryProvider.setSelectClause(
                 """
                  r.id AS id,
-                 r.performance_seat_id AS performance_seat_id
+                 r.performance_seat_id AS performance_seat_id,
+                 r.expires_at AS expires_at
                  """
         );
 
@@ -81,12 +83,11 @@ public class ReservationExpirationItemReader extends JdbcPagingItemReader<Reserv
                 """
         );
 
-        queryProvider.setSortKeys(
-                Map.of(
-                        "id",
-                        Order.ASCENDING
-                )
-        );
+        Map<String, Order> sortKeys = new LinkedHashMap<>();
+        sortKeys.put("expires_at", Order.ASCENDING);
+        sortKeys.put("id", Order.ASCENDING);
+
+        queryProvider.setSortKeys(sortKeys);
 
         return queryProvider;
     }
