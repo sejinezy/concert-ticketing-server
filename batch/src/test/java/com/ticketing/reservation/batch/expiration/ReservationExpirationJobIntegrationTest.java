@@ -432,6 +432,77 @@ class ReservationExpirationJobIntegrationTest {
                 .isEqualTo(BASE_CUTOFF_AT);
     }
 
+    @Test
+    void 동일한_만료시각이_page_경계를_걸쳐도_누락_없이_처리한다()
+            throws Exception {
+
+        /*
+         * chunk-size / pageSize = 2
+         *
+         * 5개의 예약이 모두 동일한 expiresAt을 가진다.
+         *
+         * 정렬 기준:
+         * expires_at ASC, id ASC
+         *
+         * expires_at만으로는 각 행의 순서를 구분할 수 없지만,
+         * PK인 id를 보조 정렬 키로 사용하므로
+         * 페이지 경계를 넘어가도 누락/중복 없이 읽어야 한다.
+         *
+         * page 1: 2건
+         * page 2: 2건
+         * page 3: 1건
+         */
+
+        LocalDateTime sameReservedAt =
+                BASE_CUTOFF_AT.minusMinutes(20);
+
+        List<ReservationData> expirationTargets =
+                new ArrayList<>();
+
+        for (int index = 0; index < 5; index++) {
+            expirationTargets.add(
+                    createReservation(
+                            sameReservedAt,
+                            true
+                    )
+            );
+        }
+
+        JobExecution jobExecution =
+                jobLauncher.launch();
+
+        StepExecution stepExecution =
+                findExpirationStep(jobExecution);
+
+        assertThat(jobExecution.getStatus())
+                .isEqualTo(BatchStatus.COMPLETED);
+
+        assertThat(stepExecution.getStatus())
+                .isEqualTo(BatchStatus.COMPLETED);
+
+        /*
+         * 동일한 expiresAt을 가진 데이터가
+         * 여러 page에 걸쳐 있어도 5건 모두 정확히 한 번 읽어야 한다.
+         */
+        assertThat(stepExecution.getReadCount())
+                .isEqualTo(5L);
+
+        assertThat(stepExecution.getWriteCount())
+                .isEqualTo(5L);
+
+        assertThat(stepExecution.getRollbackCount())
+                .isZero();
+
+        assertThat(expirationTargets)
+                .allSatisfy(
+                        target ->
+                                assertExpired(
+                                        target,
+                                        BASE_CUTOFF_AT
+                                )
+                );
+    }
+
     private void createCommonFixture() {
         transactionTemplate.executeWithoutResult(
                 status -> {
