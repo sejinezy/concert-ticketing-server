@@ -21,3 +21,14 @@ spring:
   sql:
     init:
       mode: never
+
+management:
+  server:
+    port: 9091
+
+  endpoints:
+    web:
+      exposure:
+        include:
+          - health
+          - prometheus
