@@ -60,6 +60,12 @@ public final class ErrorTypeHttpStatusMapper {
                  IDEMPOTENCY_REQUEST_NOT_FOUND,
                  IDEMPOTENCY_INVALID_STATE
                     -> HttpStatus.INTERNAL_SERVER_ERROR;
+
+            case PAYMENT_SERVICE_BUSY
+                    -> HttpStatus.SERVICE_UNAVAILABLE;
+
+            case PAYMENT_RATE_LIMIT_EXCEEDED
+                    -> HttpStatus.TOO_MANY_REQUESTS;
         };
     }
 }

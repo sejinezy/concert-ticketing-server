@@ -1,9 +1,12 @@
 package com.ticketing.support.error;
 
 import com.ticketing.support.response.ApiResponse;
+import io.github.resilience4j.bulkhead.BulkheadFullException;
+import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.logging.LogLevel;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -44,6 +47,39 @@ public class ApiControllerAdvice {
         return ResponseEntity
                 .status(ErrorTypeHttpStatusMapper.resolve(ErrorType.INVALID_REQUEST))
                 .body(ApiResponse.error(ErrorType.INVALID_REQUEST, message));
+    }
+
+    @ExceptionHandler(BulkheadFullException.class)
+    public ResponseEntity<ApiResponse<Object>> handleBulkheadFullException(
+            BulkheadFullException exception
+    ) {
+
+        log.warn(
+                "BulkheadFullException: external service concurrency limit exceeded. message={}",
+                exception.getMessage()
+        );
+
+        return ResponseEntity
+                .status(ErrorTypeHttpStatusMapper.resolve(ErrorType.PAYMENT_SERVICE_BUSY))
+                .body(ApiResponse.error(ErrorType.PAYMENT_SERVICE_BUSY));
+    }
+
+    @ExceptionHandler(RequestNotPermitted.class)
+    public ResponseEntity<ApiResponse<Object>> handleRequestNotPermitted(
+            RequestNotPermitted exception
+    ) {
+        log.warn(
+                "RequestNotPermitted: payment rate limit exceeded. message={}",
+                exception.getMessage()
+        );
+
+        return ResponseEntity
+                .status(ErrorTypeHttpStatusMapper.resolve(
+                        ErrorType.PAYMENT_RATE_LIMIT_EXCEEDED
+                ))
+                .body(ApiResponse.error(
+                        ErrorType.PAYMENT_RATE_LIMIT_EXCEEDED
+                ));
     }
 
     @ExceptionHandler(Exception.class)

@@ -32,3 +32,8 @@ management:
         include:
           - health
           - prometheus
+
+server:
+  tomcat:
+    mbeanregistry:
+      enabled: true

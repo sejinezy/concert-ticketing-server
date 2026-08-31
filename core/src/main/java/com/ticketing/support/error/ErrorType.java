@@ -255,6 +255,19 @@ public enum ErrorType {
             ErrorCode.E8006,
             "멱등성 요청 상태가 올바르지 않습니다.",
             LogLevel.ERROR
+    ),
+
+    // 외부 서비스 - Payment
+    PAYMENT_SERVICE_BUSY(
+            ErrorCode.E9000,
+            "결제 서비스가 일시적으로 혼잡합니다. 잠시 후 다시 시도해주세요.",
+            LogLevel.WARN
+    ),
+
+    PAYMENT_RATE_LIMIT_EXCEEDED(
+            ErrorCode.E9001,
+            "결제 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.",
+            LogLevel.WARN
     );
 
 
@@ -268,4 +281,4 @@ public enum ErrorType {
         this.message = message;
         this.logLevel = logLevel;
     }
-}
+    }
