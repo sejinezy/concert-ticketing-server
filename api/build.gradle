@@ -17,6 +17,12 @@ repositories {
     mavenCentral()
 }
 
+dependencyManagement {
+    imports {
+        mavenBom 'io.awspring.cloud:spring-cloud-aws-dependencies:4.0.2'
+    }
+}
+
 dependencies {
     implementation project(':core')
 
@@ -25,6 +31,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'io.github.resilience4j:resilience4j-spring-boot4:2.4.0'
     implementation 'org.springframework.boot:spring-boot-starter-aspectj'
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-parameter-store'
 
     runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
 
