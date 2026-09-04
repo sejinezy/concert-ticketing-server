@@ -1,4 +1,12 @@
 spring:
+  config:
+    import: "aws-parameterstore:/ticketing/prod/"
+
+  cloud:
+    aws:
+      region:
+        static: ap-northeast-2
+
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -32,3 +40,32 @@ management:
         include:
           - health
           - prometheus
+
+server:
+  tomcat:
+    mbeanregistry:
+      enabled: true
+
+resilience4j:
+  circuitbreaker:
+    circuit-breaker-aspect-order: 1
+
+    instances:
+      payment:
+        ignore-exceptions:
+          - io.github.resilience4j.bulkhead.BulkheadFullException
+          - com.ticketing.payment.PaymentNonRetryableException
+          - com.ticketing.payment.ratelimit.exception.PaymentRateLimitExceededException
+          - com.ticketing.payment.ratelimit.exception.RateLimiterUnavailableException
+
+  retry:
+    retry-aspect-order: 2
+
+    instances:
+      payment:
+        retry-exceptions:
+          - com.ticketing.payment.PaymentRetryableException
+        ignore-exceptions:
+          - com.ticketing.payment.PaymentNonRetryableException
+          - io.github.resilience4j.bulkhead.BulkheadFullException
+

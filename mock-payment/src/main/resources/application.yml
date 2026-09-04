@@ -1,0 +1,30 @@
+server:
+  port: 8081
+  tomcat:
+    mbeanregistry:
+      enabled: true
+
+spring:
+  application:
+    name: mock-payment
+
+management:
+  server:
+    port: 9092
+
+  endpoints:
+    web:
+      exposure:
+        include:
+          - health
+          - prometheus
+          - metrics
+
+  endpoint:
+    health:
+      show-details: always
+
+  metrics:
+    tags:
+      application: ${spring.application.name}
+

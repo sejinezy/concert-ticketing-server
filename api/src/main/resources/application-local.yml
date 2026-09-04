@@ -18,6 +18,17 @@ spring:
     init:
       mode: never
 
+  cloud:
+    aws:
+      parameterstore:
+        enabled: false
+
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
 management:
   server:
     port: 9091
@@ -29,3 +40,51 @@ management:
           - health
           - metrics
           - prometheus
+
+server:
+  tomcat:
+    mbeanregistry:
+      enabled: true
+
+external:
+  payment:
+    base-url: http://localhost:8081
+    rate-limit:
+      capacity: 3
+      refill-rate: 0
+
+resilience4j:
+  circuitbreaker:
+    circuit-breaker-aspect-order: 1
+    instances:
+      payment:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        ignore-exceptions:
+          - io.github.resilience4j.bulkhead.BulkheadFullException
+          - com.ticketing.payment.PaymentNonRetryableException
+          - com.ticketing.payment.ratelimit.exception.PaymentRateLimitExceededException
+          - com.ticketing.payment.ratelimit.exception.RateLimiterUnavailableException
+  retry:
+    retry-aspect-order: 2
+    instances:
+      payment:
+        max-attempts: 3
+        wait-duration: 500ms
+        retry-exceptions:
+          - com.ticketing.payment.PaymentRetryableException
+        ignore-exceptions:
+          - com.ticketing.payment.PaymentNonRetryableException
+          - io.github.resilience4j.bulkhead.BulkheadFullException
+
+  bulkhead:
+    instances:
+      payment:
+        max-concurrent-calls: 20
+        max-wait-duration: 0
+
