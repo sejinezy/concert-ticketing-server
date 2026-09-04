@@ -45,3 +45,32 @@ server:
   tomcat:
     mbeanregistry:
       enabled: true
+
+resilience4j:
+  circuitbreaker:
+    circuit-breaker-aspect-order: 1
+
+    instances:
+      payment:
+        ignore-exceptions:
+          - io.github.resilience4j.ratelimiter.RequestNotPermitted
+          - io.github.resilience4j.bulkhead.BulkheadFullException
+          - com.ticketing.payment.PaymentNonRetryableException
+
+  retry:
+    retry-aspect-order: 2
+
+    instances:
+      payment:
+        retry-exceptions:
+          - com.ticketing.payment.PaymentRetryableException
+        ignore-exceptions:
+          - com.ticketing.payment.PaymentNonRetryableException
+          - io.github.resilience4j.bulkhead.BulkheadFullException
+
+  ratelimiter:
+    instances:
+      payment:
+        limit-for-period: 20
+        limit-refresh-period: 1s
+        timeout-duration: 0
