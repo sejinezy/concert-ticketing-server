@@ -53,9 +53,10 @@ resilience4j:
     instances:
       payment:
         ignore-exceptions:
-          - io.github.resilience4j.ratelimiter.RequestNotPermitted
           - io.github.resilience4j.bulkhead.BulkheadFullException
           - com.ticketing.payment.PaymentNonRetryableException
+          - com.ticketing.payment.ratelimit.exception.PaymentRateLimitExceededException
+          - com.ticketing.payment.ratelimit.exception.RateLimiterUnavailableException
 
   retry:
     retry-aspect-order: 2
@@ -68,9 +69,3 @@ resilience4j:
           - com.ticketing.payment.PaymentNonRetryableException
           - io.github.resilience4j.bulkhead.BulkheadFullException
 
-  ratelimiter:
-    instances:
-      payment:
-        limit-for-period: 20
-        limit-refresh-period: 1s
-        timeout-duration: 0

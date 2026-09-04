@@ -10,23 +10,25 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/test/payments")
 public class PaymentTestController {
 
-    private final PaymentClient paymentClient;
+    private final PaymentService paymentService;
 
-    public PaymentTestController(PaymentClient paymentClient) {
-        this.paymentClient = paymentClient;
+    public PaymentTestController(
+            PaymentService paymentService
+    ) {
+        this.paymentService = paymentService;
     }
 
     @PostMapping("/{reservationId}")
     public PaymentResponse pay(
             @PathVariable Long reservationId
     ) {
-        String idempotencyKey = UUID.randomUUID().toString();
+        String idempotencyKey =
+                UUID.randomUUID().toString();
 
-        return paymentClient.pay(
+        return paymentService.pay(
                 reservationId,
                 50_000L,
                 idempotencyKey
         );
     }
-
 }

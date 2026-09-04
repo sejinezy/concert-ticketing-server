@@ -1,9 +1,12 @@
 package com.ticketing.payment;
 
+import com.ticketing.payment.ratelimit.DistributedRateLimiter;
+import com.ticketing.payment.ratelimit.exception.PaymentRateLimitExceededException;
+import com.ticketing.support.error.CoreException;
+import com.ticketing.support.error.ErrorType;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead.Type;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
-import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.retry.annotation.Retry;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
@@ -12,14 +15,17 @@ import org.springframework.web.client.RestClient;
 @Component
 public class PaymentClient {
 
-    private final RestClient restClient;
+    private static final String PAYMENT_RATE_LIMIT_KEY = "payment";
 
-    public PaymentClient(RestClient restClient) {
+    private final RestClient restClient;
+    private final DistributedRateLimiter distributedRateLimiter;
+
+    public PaymentClient(RestClient restClient, DistributedRateLimiter distributedRateLimiter) {
         this.restClient = restClient;
+        this.distributedRateLimiter = distributedRateLimiter;
     }
 
 
-    @RateLimiter(name = "payment")
     @Retry(name = "payment")
     @Bulkhead(name = "payment", type = Type.SEMAPHORE)
     @CircuitBreaker(name = "payment")
@@ -28,6 +34,11 @@ public class PaymentClient {
             Long amount,
             String idempotencyKey
     ) {
+
+        if (!distributedRateLimiter.tryAcquire(PAYMENT_RATE_LIMIT_KEY)) {
+            throw new PaymentRateLimitExceededException();
+        }
+
         PaymentRequest request = new PaymentRequest(reservationId, amount);
 
         return restClient.post()
